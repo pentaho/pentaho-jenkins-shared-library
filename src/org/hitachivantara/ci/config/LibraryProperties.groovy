@@ -74,6 +74,8 @@ class LibraryProperties implements Serializable {
   public static final String BUILD_ORDER_REPORT = 'BUILD_ORDER_REPORT'
 
   public static final String NOOP = 'NOOP'
+
+  // TODO deprecate the stage ones
   public static final String RUN_BUILDS = 'RUN_BUILDS'
   public static final String RUN_CHECKOUTS = 'RUN_CHECKOUTS'
   public static final String RUN_VERSIONING = 'RUN_VERSIONING'
@@ -84,6 +86,7 @@ class LibraryProperties implements Serializable {
   public static final String RUN_SONARQUBE = 'RUN_SONARQUBE'
 
   public static final String PUSH_CHANGES = 'PUSH_CHANGES'
+  public static final String PARALLEL_SIZE = 'PARALLEL_SIZE'
   public static final String PARALLEL_CHUNKSIZE = 'PARALLEL_CHUNKSIZE'
   public static final String PARALLEL_CHECKOUT_CHUNKSIZE = 'PARALLEL_CHECKOUT_CHUNKSIZE'
   public static final String PARALLEL_PUSH_CHUNKSIZE = 'PARALLEL_PUSH_CHUNKSIZE'

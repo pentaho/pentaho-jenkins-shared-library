@@ -2,31 +2,37 @@
 library(identifier: '$library', changelog: false)
 #end
 
+#set( $runCheckout = $properties.getBool('RUN_STAGE_CHECKOUT') )
+#set( $runBuild = $properties.getBool('RUN_STAGE_BUILD') )
+#set( $runAudit = $properties.getBool('RUN_STAGE_AUDIT') && $item.auditable )
+##
 Map defaultParams = [
   SLAVE_NODE_LABEL    : '$properties.getString('SLAVE_NODE_LABEL')',
   WORKSPACE           : '$properties.getString('WORKSPACE')',
   BUILD_DATA_ROOT_PATH: '$properties.getString('BUILD_DATA_ROOT_PATH')',
   BUILD_DATA_FILE     : '$properties.getString('BUILD_DATA_FILE')',
-  RUN_CHECKOUTS       : $properties.getBool('RUN_CHECKOUTS'),
-  RUN_BUILDS          : $properties.getBool('RUN_BUILDS'),
-  RUN_AUDIT           : $properties.getBool('RUN_AUDIT'),
+
+  RUN_STAGE_CHECKOUT  : $runCheckout,
+  RUN_STAGE_BUILD     : $runBuild,
+  RUN_STAGE_AUDIT     : $runAudit,
+
   OVERRIDE_PARAMS     : [:],
   OVERRIDE_JOB_PARAMS : [:]
 ]
 
 node(params.SLAVE_NODE_LABEL ?: defaultParams.SLAVE_NODE_LABEL) {
   timestamps {
-    config.stage(defaultParams)
+    stages.configure(defaultParams)
 
     catchError {
       timeout(config.get().timeout) {
-        checkoutStage()
-        buildStage2()
-        audit()
+        stages.checkout()
+        stages.buildAndTest()
+        stages.audit()
       }
     }
 
-    reportStage()
+    stages.report()
 
     if (config.get().isPullRequest()) {
       stage('Cleanup') {
