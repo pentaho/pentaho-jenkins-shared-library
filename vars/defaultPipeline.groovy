@@ -3,30 +3,32 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
+
+import groovy.transform.Field
 import org.hitachivantara.ci.config.BuildData
+
+@Field BuildData buildData = BuildData.instance
 
 def call() {
   node(params.SLAVE_NODE_LABEL ?: 'non-master') {
     timestamps {
-      config.stage()
+      stages.configure()
 
       catchError {
-        timeout(BuildData.instance.timeout) {
-          clean.preStage()
-          building.preStage()
-          checkoutStage()
-          versionStage()
-          buildStage()
-          testStage()
-          pushStage()
-          tag.stage()
-          archivingStage()
-          building.postStage()
-          clean.postStage()
+        timeout(buildData.timeout) {
+          stages.preClean()
+          stages.checkout()
+          stages.version()
+          stages.build()
+          stages.test()
+          stages.push()
+          stages.tag()
+          stages.archive()
+          stages.postClean()
         }
       }
 
-      reportStage()
+      stages.report()
     }
   }
 }

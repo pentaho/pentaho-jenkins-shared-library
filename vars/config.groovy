@@ -70,6 +70,7 @@ BuildData load(Map defaultParams = [:]) {
   BuildData buildData = builder.build()
   builder.consumeMessages()
 
+  log.info "Configuration loaded for: ${buildData.get(BUILD_PLAN_ID)}", buildData
   return buildData
 }
 

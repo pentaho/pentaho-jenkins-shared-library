@@ -289,3 +289,60 @@ void withContainer(String imageName, Closure body) {
     }
   }
 }
+
+/**
+ * Tag a job item git repository and push the tag to remote
+ * @param item
+ * @param tagName
+ * @param tagMessage
+ * @return
+ */
+void tagItem(JobItem item, String tagName, String tagMessage) {
+  Map scmInfo = item.scmInfo + [credentials: item.scmCredentials]
+
+  dir(item.buildWorkDir) {
+    withGit(scmInfo) { String gitUrl ->
+      sh("git tag -a ${tagName} -m '${tagMessage}' --force")
+      sh("git push ${gitUrl} ${tagName} --force")
+    }
+  }
+}
+
+/**
+ * Push a job item into the git repository
+ * @param item
+ * @return
+ */
+void pushItem(JobItem item) {
+  Map scmInfo = item.scmInfo + [credentials: item.scmCredentials]
+
+  dir(item.buildWorkDir) {
+    withGit(scmInfo) { String gitUrl ->
+      sh("git push ${gitUrl} HEAD:${item.scmBranch}")
+    }
+  }
+}
+
+/**
+ * Evaluate a given tag name to provide dynamic tag naming expressions
+ *
+ * Currently supported expressions:
+ * - date|<format expression> : date|yyyyMMdd-${BUILD_NUMBER}
+ *
+ * @param tagName
+ * @return
+ */
+String evaluateTagName(String tagName) {
+  List parts = tagName.tokenize('|')
+
+  if (parts.size() < 2) {
+    return tagName
+  }
+
+  switch (parts[0]) {
+    case 'date':
+      return BuildData.instance.clock.format(parts[1])
+    default:
+      return tagName
+  }
+}

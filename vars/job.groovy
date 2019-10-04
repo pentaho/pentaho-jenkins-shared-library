@@ -3,12 +3,21 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
+
+import groovy.transform.Field
 import hudson.model.Job
 import hudson.model.Result
+import org.hitachivantara.ci.JobItem
+import org.hitachivantara.ci.config.BuildData
 import org.hitachivantara.ci.jenkins.JobException
 import org.hitachivantara.ci.jenkins.JobBuild
 import org.hitachivantara.ci.jenkins.JobUtils
 import org.jenkinsci.plugins.pipeline.utility.steps.shaded.org.yaml.snakeyaml.Yaml
+
+import static org.hitachivantara.ci.config.LibraryProperties.IS_MINION
+import static org.hitachivantara.ci.config.LibraryProperties.IS_MULTIBRANCH_MINION
+
+@Field BuildData buildData = BuildData.instance
 
 /**
  * Get the next build number for the job with the given name
@@ -95,4 +104,20 @@ void setBuildResult(result) {
  */
 void setBuildUnstable() {
   setBuildResult(Result.UNSTABLE)
+}
+
+/**
+ * Archive Job Item tests on the current job
+ * @param item
+ */
+void archiveTests(JobItem item) {
+  if (!buildData.getBool(IS_MINION) || buildData.getBool(IS_MULTIBRANCH_MINION)) {
+    log.debug "Archiving tests for job item ${item.jobID} with pattern ${item.testsArchivePattern}"
+    List paths = item.modulePaths ?: [item.buildWorkDir]
+    paths.each { String path ->
+      dir(path) {
+        junit allowEmptyResults: true, testResults: item.testsArchivePattern
+      }
+    }
+  }
 }
