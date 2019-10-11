@@ -125,7 +125,7 @@ class TestMavenChangeDetector extends BasePipelineSpecification {
       mvnBuild()
 
     then: "the scripts yielded commands"
-      (shellRule.cmds[0] - ' -Daether.connector.resumeDownloads=false -DskipTests') == expectedCommand
+      (shellRule.cmds[0] - ' -DskipTests') == expectedCommand
       workdir == expectedWorkdir
 
     where:
@@ -230,7 +230,7 @@ class TestMavenChangeDetector extends BasePipelineSpecification {
       mvnBuild()
 
     then: "the scripts yielded commands"
-      (shellRule.cmds[0] - ' -Daether.connector.resumeDownloads=false') == expectedCommand
+      shellRule.cmds[0] == expectedCommand
       workdir == expectedWorkdir
 
     where:
@@ -300,12 +300,12 @@ class TestMavenChangeDetector extends BasePipelineSpecification {
       [[], Result.SUCCESS]                | [[], Result.SUCCESS]                                 | [['sub-2/sub-1/pom.xml'], null]
 
       expected << [
-        'mvn clean install -Daether.connector.resumeDownloads=false -DskipTests -pl sub-3',
-        'mvn clean install -Daether.connector.resumeDownloads=false -DskipTests -pl sub-1,sub-3',
-        'mvn clean install -Daether.connector.resumeDownloads=false -DskipTests',
-        'mvn clean install -Daether.connector.resumeDownloads=false -DskipTests -pl sub-1,sub-3/sub-1',
-        'mvn clean install -Daether.connector.resumeDownloads=false -DskipTests -pl sub-2',
-        'mvn clean install -Daether.connector.resumeDownloads=false -DskipTests -pl sub-2/sub-1',
+        'mvn clean install -DskipTests -pl sub-3',
+        'mvn clean install -DskipTests -pl sub-1,sub-3',
+        'mvn clean install -DskipTests',
+        'mvn clean install -DskipTests -pl sub-1,sub-3/sub-1',
+        'mvn clean install -DskipTests -pl sub-2',
+        'mvn clean install -DskipTests -pl sub-2/sub-1',
       ]
   }
 
