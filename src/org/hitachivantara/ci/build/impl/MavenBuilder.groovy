@@ -49,6 +49,10 @@ import static org.hitachivantara.ci.config.LibraryProperties.PR_STATUS_REPORTS
 
 class MavenBuilder implements IBuilder, Builder, Serializable {
 
+  // This is for using Takari Concurrent Local Repository which uses aether so to avoid the occasional .part file
+  // 'resume' (see: https://github.com/takari/takari-local-repository/issues/4) issue we send this:
+  private final String BASE_MAVEN_OPTS = '-Daether.connector.resumeDownloads=false'
+
   private BuildData buildData
   private JobItem jobItem
   private Script steps
@@ -271,12 +275,7 @@ class MavenBuilder implements IBuilder, Builder, Serializable {
   CommandBuilder getCommandBuilder(JobItem jobItem, String... args) {
     List<String> options = [buildData.getString(MAVEN_DEFAULT_COMMAND_OPTIONS)]
 
-    if (jobItem.buildFile) options += "-f ${jobItem.buildFile}"
-
-    // This is for using Takari Concurrent Local Repository which uses aether so to avoid the occasional .part file
-    // 'resume' (see: https://github.com/takari/takari-local-repository/issues/4) issue we send this:
-    options += '-Daether.connector.resumeDownloads=false'
-
+    if (jobItem.buildFile) options.add("-f ${jobItem.buildFile}")
     options.addAll(args)
 
     CommandBuilder command = steps.getMavenCommandBuilder(options: options.join(' '))
@@ -295,8 +294,8 @@ class MavenBuilder implements IBuilder, Builder, Serializable {
     String mavenPrivateSnapshotRepo = buildData.getString(MAVEN_PRIVATE_SNAPSHOT_REPO_URL)
     String jdk = buildData.getString(JENKINS_JDK_FOR_BUILDS)
     String mavenTool = buildData.getString(JENKINS_MAVEN_FOR_BUILDS)
-    String mavenOPTS = buildData.getString(MAVEN_OPTS)
     String artifactDeployerCredentialsId = buildData.getString(ARTIFACT_DEPLOYER_CREDENTIALS_ID)
+    String mavenOPTS = "${BASE_MAVEN_OPTS} ${buildData.getString(MAVEN_OPTS)}"
 
     return { ->
       steps.dir(jobItem.buildWorkDir) {

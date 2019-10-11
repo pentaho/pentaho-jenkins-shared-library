@@ -61,7 +61,7 @@ class TestMavenBuild extends BasePipelineSpecification {
       Builder builder = BuilderFactory.builderFor(mockScript, jobItem)
       builder.getExecution().call()
     then:
-      shellRule.cmds[0] == 'mvn clean install -Daether.connector.resumeDownloads=false'
+      shellRule.cmds[0] == 'mvn clean install'
   }
 
   @Unroll
@@ -85,9 +85,9 @@ class TestMavenBuild extends BasePipelineSpecification {
       ]
 
       expected << [
-        'mvn clean install -B -e -Daether.connector.resumeDownloads=false -DskipTests',
-        'mvn package -B -e -Daether.connector.resumeDownloads=false -DskipTests',
-        'mvn install -B -e -f ./core/pom.xml -Daether.connector.resumeDownloads=false -DskipTests'
+        'mvn clean install -B -e -DskipTests',
+        'mvn package -B -e -DskipTests',
+        'mvn install -B -e -f ./core/pom.xml -DskipTests'
       ]
   }
 
@@ -106,8 +106,8 @@ class TestMavenBuild extends BasePipelineSpecification {
 
     where:
       jobData                                             || expected
-      ['buildFramework': 'Maven']                         || 'mvn test -Daether.connector.resumeDownloads=false -DsurefireArgLine=-Xmx1g'
-      ['buildFramework': 'Maven', 'buildFile': 'pom.xml'] || 'mvn test -f pom.xml -Daether.connector.resumeDownloads=false -DsurefireArgLine=-Xmx1g'
+      ['buildFramework': 'Maven']                         || 'mvn test -DsurefireArgLine=-Xmx1g'
+      ['buildFramework': 'Maven', 'buildFile': 'pom.xml'] || 'mvn test -f pom.xml -DsurefireArgLine=-Xmx1g'
   }
 
   @Unroll
@@ -135,10 +135,10 @@ class TestMavenBuild extends BasePipelineSpecification {
       ]
 
       expected << [
-        'mvn test -Daether.connector.resumeDownloads=false -DsurefireArgLine=-Xmx1g -Daudit -P core',
-        'mvn test -Daether.connector.resumeDownloads=false',
-        'mvn test -Daether.connector.resumeDownloads=false -Daudit',
-        'mvn test -Daether.connector.resumeDownloads=false -DsurefireArgLine=-Xmx1g'
+        'mvn test -DsurefireArgLine=-Xmx1g -Daudit -P core',
+        'mvn test',
+        'mvn test -Daudit',
+        'mvn test -DsurefireArgLine=-Xmx1g'
       ]
   }
 
