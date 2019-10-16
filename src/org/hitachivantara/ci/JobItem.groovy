@@ -82,7 +82,9 @@ class JobItem implements Serializable {
       'timeout',
       'createRelease',
       'previousReleaseTag',
-      'auditable'
+      'auditable',
+      'slackChannel',
+      'prSlackChannel'
   ]
 
   JobItem(Map jobData, Map buildProperties = [:]) {
@@ -440,6 +442,13 @@ class JobItem implements Serializable {
     data.script
   }
 
+  def getSlackChannel() {
+    data.slackChannel
+  }
+
+  def getPrSlackChannel() {
+    data.prSlackChannel
+  }
   /**
    * Get timeout in minutes
    * @return

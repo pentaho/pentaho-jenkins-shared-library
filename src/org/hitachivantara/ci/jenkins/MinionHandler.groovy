@@ -19,6 +19,7 @@ import static org.hitachivantara.ci.config.LibraryProperties.ARCHIVE_ARTIFACTS
 import static org.hitachivantara.ci.config.LibraryProperties.BRANCH_NAME
 import static org.hitachivantara.ci.config.LibraryProperties.BUILD_DATA_FILE
 import static org.hitachivantara.ci.config.LibraryProperties.BUILD_DATA_ROOT_PATH
+import static org.hitachivantara.ci.config.LibraryProperties.BUILD_NUMBER
 import static org.hitachivantara.ci.config.LibraryProperties.BUILD_PLAN_ID
 import static org.hitachivantara.ci.config.LibraryProperties.CHANGE_ID
 import static org.hitachivantara.ci.config.LibraryProperties.CHANGE_TARGET
@@ -35,12 +36,15 @@ import static org.hitachivantara.ci.config.LibraryProperties.MINION_LOGS_TO_KEEP
 import static org.hitachivantara.ci.config.LibraryProperties.MINION_PIPELINE_TEMPLATE
 import static org.hitachivantara.ci.config.LibraryProperties.MINION_POLL_CRON_INTERVAL
 import static org.hitachivantara.ci.config.LibraryProperties.POLL_CRON_INTERVAL
+import static org.hitachivantara.ci.config.LibraryProperties.PR_SLACK_CHANNEL
 import static org.hitachivantara.ci.config.LibraryProperties.PR_STATUS_REPORTS
 import static org.hitachivantara.ci.config.LibraryProperties.RELEASE_BUILD_NUMBER
 import static org.hitachivantara.ci.config.LibraryProperties.RUN_AUDIT
 import static org.hitachivantara.ci.config.LibraryProperties.RUN_BUILDS
 import static org.hitachivantara.ci.config.LibraryProperties.RUN_CHECKOUTS
 import static org.hitachivantara.ci.config.LibraryProperties.RUN_UNIT_TESTS
+import static org.hitachivantara.ci.config.LibraryProperties.SLACK_CHANNEL
+import static org.hitachivantara.ci.config.LibraryProperties.SLACK_INTEGRATION
 import static org.hitachivantara.ci.config.LibraryProperties.STAGE_LABEL_ARCHIVING
 import static org.hitachivantara.ci.config.LibraryProperties.STAGE_LABEL_BUILD
 import static org.hitachivantara.ci.config.LibraryProperties.STAGE_LABEL_CHECKOUT
@@ -243,6 +247,8 @@ class MinionHandler {
     buildProperties.put(FIRST_JOB, null)
     buildProperties.put(LAST_JOB, null)
     buildProperties.put(RELEASE_BUILD_NUMBER, buildData.getString(RELEASE_BUILD_NUMBER))
+    buildProperties.put(SLACK_CHANNEL, jobItem.slackChannel)
+    buildProperties.put(PR_SLACK_CHANNEL, jobItem.prSlackChannel)
 
     return [
       buildProperties: buildProperties,
@@ -298,6 +304,18 @@ class MinionHandler {
     // update build cache path for Multibranch building a Base Branch, use the same cache for all
     else if (buildProperties[BRANCH_NAME]) {
       buildProperties[LIB_CACHE_ROOT_PATH] = "${buildProperties[LIB_CACHE_ROOT_PATH]}/${buildProperties[BRANCH_NAME]}"
+    }
+
+    // when in a multibranch minion build, check if it's a PR or a branch build to see which slack channel to send
+    // a notification if intended
+    if (buildProperties[IS_MULTIBRANCH_MINION]) {
+      def slackChannel = buildProperties[CHANGE_ID] ? buildProperties[PR_SLACK_CHANNEL] : buildProperties[SLACK_CHANNEL]
+      if (slackChannel) {
+        buildProperties[SLACK_INTEGRATION] = true
+        buildProperties[SLACK_CHANNEL] = slackChannel
+        buildProperties[BUILD_PLAN_ID] = (buildProperties[BUILD_PLAN_ID] + '@' + buildProperties[BRANCH_NAME]) as String
+        buildProperties[RELEASE_BUILD_NUMBER] = buildProperties[BUILD_NUMBER]
+      }
     }
   }
 
