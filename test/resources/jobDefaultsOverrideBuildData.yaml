@@ -1,0 +1,10 @@
+buildProperties:
+  BUILD_PLAN_ID     : Test job defaults
+  JOB_ITEM_DEFAULTS :
+    buildFramework: ANT
+
+jobGroups:
+  20:
+    - jobID             :  pdi-plugins
+      scmUrl            :  https://github.com/pentaho/pentaho-ee.git
+      root              :  data-integration/plugins

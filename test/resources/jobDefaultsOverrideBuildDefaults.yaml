@@ -1,0 +1,6 @@
+JOB_ITEM_DEFAULTS:
+  scmBranch: master
+  buildFramework: MAVEN
+  buildFile: pom.xml
+  directives: clean install
+  testable: true

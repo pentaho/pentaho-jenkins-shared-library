@@ -1,0 +1,8 @@
+out
+gdsl
+*.iml
+.idea
+target/
+*.project
+.classpath
+.settings/

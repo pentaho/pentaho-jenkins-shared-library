@@ -1,0 +1,13 @@
+# Defaults for properties available during test execution
+# These can be overriden in pipeline build data file or in the pipeline run parameters.
+
+# Basic defaults for some mandatory properties
+BUILD_DATA_FILE         :
+BUILD_VERSIONS_FILE     :
+BUILD_CONFIG_ROOT_PATH  : test/resources
+BUILD_DATA_ROOT_PATH    : test/resources
+LIB_CACHE_ROOT_PATH     : caches
+BUILDS_ROOT_PATH        : builds
+LOG_LEVEL               : INFO
+
+RELEASE_BUILD_NUMBER    : ${BUILD_NUMBER}

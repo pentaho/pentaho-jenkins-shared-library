@@ -1,0 +1,28 @@
+# global build control defaults
+# These are understood by the shared pipeline libraries:
+
+BUILD_DATA_FILE         :
+BUILD_VERSIONS_FILE     :
+BUILD_CONFIG_ROOT_PATH  : test/resources
+BUILD_DATA_ROOT_PATH    : test/resources
+LIB_CACHE_ROOT_PATH     : caches
+BUILDS_ROOT_PATH        : builds
+LOG_LEVEL               : INFO
+
+RELEASE_BUILD_NUMBER    : ${BUILD_NUMBER}
+
+MAVEN_DEFAULT_COMMAND_OPTIONS  : ''
+MAVEN_DEFAULT_DIRECTIVES       : clean install
+ANT_DEFAULT_DIRECTIVES         : clean-all resolve publish
+GRADLE_DEFAULT_DIRECTIVES      : clean build
+GRADLE_TEST_TARGETS            : test
+SCM_HOST_ROOT                  : https://github.com
+PENTAHO_SCM_ROOT               : https://github.com/pentaho
+WEBDETAILS_SCM_ROOT            : https://github.com/webdetails
+DEFAULT_BRANCH                 : master
+AN_AMAZING_PROPERTY            : Amazing Value
+ARCHIVE_TESTS_PATTERN          : '**/bin/**/TEST*.xml, **/target/**/TEST*.xml, **/build/**/*Test.xml'
+
+JOB_ITEM_DEFAULTS:
+  buildFramework    :  MAVEN
+  scmBranch: ${DEFAULT_BRANCH}

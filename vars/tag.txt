@@ -1,0 +1,25 @@
+<p>SCM Tagging</p>
+
+<dl>
+  <dt>
+    <code>stage()</code>
+  </dt>
+  <dd>
+    Creates a tagging stage according to the BuildData configuration
+  </dd>
+  <dt>
+    <code>getItemExecution(JobItem jobItem, String tagName, String tagMessage)</code>
+  </dt>
+  <dd>
+    Returns a Closure with the tag execution for the given job item.
+  </dd>
+  <dt>
+    <code>evaluateTagName(String tagName)</code>
+  </dt>
+  <dd>
+    Evaluates a tag expression providing dynamic tag messages returning the resulting String value.
+    <ul>
+      <li><code>date|&lt;format expression&gt;</code> : Expressions using SimpleDateFormat. e.g. date|yyyyMMdd-${BUILD_NUMBER}</li>
+    </ul>
+  </dd>
+</dl>

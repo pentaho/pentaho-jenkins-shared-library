@@ -1,0 +1,11 @@
+buildProperties:
+  BUILD_PLAN_ID     : Test param overrides
+  JOB_ITEM_DEFAULTS :
+    buildFramework: ANT
+  PARAM_TO_OVERRIDE : default value
+
+jobGroups:
+  20:
+    - jobID             :  pdi-plugins
+      scmUrl            :  https://github.com/pentaho/pentaho-ee.git
+      root              :  data-integration/plugins

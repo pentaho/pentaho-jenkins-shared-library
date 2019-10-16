@@ -1,0 +1,24 @@
+buildProperties:
+  BUILD_PLAN_ID: Amazing build plan
+  DEFAULT_BRANCH: 8.0
+
+jobGroups:
+  20:
+    - jobID             :  pdi-plugins
+      scmUrl            :  ${PENTAHO_SCM_ROOT}/pentaho-ee.git
+      scmBranch         :  ${DEFAULT_BRANCH}
+      root              :  data-integration/plugins
+      execType          :  AUTO
+      testable          :  false
+
+  30:
+    - jobID             :  sparkl-plugin
+      scmUrl            :  ${WEBDETAILS_SCM_ROOT}/sparkl.git
+      scmBranch         :  ${DEFAULT_BRANCH}
+      execType          :  AUTO
+
+    - jobID             :  pdi-assemblies
+      scmUrl            :  ${PENTAHO_SCM_ROOT}/pentaho-ee.git
+      scmBranch         :  ${DEFAULT_BRANCH}
+      root              :  data-integration/assemblies
+      execType          :  AUTO

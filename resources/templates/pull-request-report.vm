@@ -1,0 +1,34 @@
+#[[###]]# :gear: Build finished in ${duration} with command:
+```console
+${command}
+```
+#if($hasTests)
+#if($failedTests.isEmpty())
+:ok_hand: All tests passed!
+#else
+#[[###]]# :warning: Failed Tests
+---
+#[[####]]# :cloud_with_lightning_and_rain: ${failCount} test(s) failed:
+#foreach ($result in $failedTests )
+- **${result.fullDisplayName}**
+```
+    ${result.errorDetails}
+```
+#end ## end forEach
+#end ## $failedTests.isEmpty()
+---
+
+## tests summary table
+|Total|Failed|Skipped|
+|---|---|---|
+|${totalCount}|${failCount}|${skipCount}|
+
+## details "button" that points to jenkins
+|[Details](${absoluteUrl})|
+|----|
+#else
+:exclamation: No tests found!
+#end
+
+
+:information_source:  _This is an automatic message_

@@ -1,0 +1,16 @@
+<p>SCM Tagging</p>
+
+<dl>
+  <dt>
+    <code>preBuild()</code>
+  </dt>
+  <dd>
+    Executes pre build job items according to the BuildData configuration
+  </dd>
+  <dt>
+    <code>postBuild()</code>
+  </dt>
+  <dd>
+    Executes post build job items according to the BuildData configuration
+  </dd>
+ </dl>

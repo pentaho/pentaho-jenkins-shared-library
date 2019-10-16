@@ -1,0 +1,27 @@
+buildProperties:
+  BUILD_PLAN_ID : Override Job Params
+
+jobGroups:
+  1:
+    - jobID           : parent-poms
+      scmUrl          : ${PENTAHO_SCM_ROOT}maven-parent-poms.git
+      scmBranch       : ${DEFAULT_BRANCH}
+      buildFramework  : maven
+      directives      :
+      buildFile       : pom.xml
+      root            :
+      execType        : FORCE
+
+  2:
+    - jobID           :  database-model
+      scmUrl          :  ${PENTAHO_SCM_ROOT}pentaho-commons-database.git
+      scmBranch       :  ${DEFAULT_BRANCH}
+      directives      :  += -pl .,model
+      root            :
+
+    - jobID           :  versionchecker
+      scmUrl          :  ${PENTAHO_SCM_ROOT}pentaho-versionchecker.git
+      scmBranch       :  ${DEFAULT_BRANCH}
+      buildFramework  :  maven
+      directives      :
+      root            :

@@ -1,0 +1,202 @@
+# Defaults for properties available during build execution
+# These can be overriden in pipeline build data file or in the pipeline run parameters.
+
+# Basic defaults for some mandatory properties
+BUILD_DATA_FILE         :
+BUILD_VERSIONS_FILE     :
+BUILD_CONFIG_ROOT_PATH  : ${WORKSPACE}/resources/config
+BUILD_DATA_ROOT_PATH    : ${WORKSPACE}/resources/builders
+LIB_CACHE_ROOT_PATH     : ${WORKSPACE}/caches
+BUILDS_ROOT_PATH        : ${WORKSPACE}/builds
+LOG_LEVEL               : INFO
+
+DEFAULT_BUILD_PROPERTIES: ${WORKSPACE}/resources/config/buildProperties.yaml
+
+# Named Build Tools that exists on master
+JENKINS_ANT_FOR_BUILDS:
+JENKINS_JDK_FOR_BUILDS:
+JENKINS_MAVEN_FOR_BUILDS:
+JENKINS_GRADLE_FOR_BUILDS:
+VERSION_MERGER_VERSION: 1.0.8
+VERSION_MERGER_LOG_LEVEL: ERROR
+
+# Ant default directives
+ANT_DEFAULT_COMMAND_OPTIONS:
+ANT_TEST_TARGETS: test jacoco
+ANT_DEFAULT_DIRECTIVES: clean-all resolve dist
+
+# Maven default directives
+MAVEN_DEFAULT_COMMAND_OPTIONS: -B -e
+MAVEN_DEFAULT_DIRECTIVES: clean install
+MAVEN_TEST_OPTS:
+MAVEN_SETTINGS:
+MAVEN_OPTS: -Xms512m
+MAVEN_RESOLVE_REPO_URL:
+MAVEN_PUBLIC_RELEASE_REPO_URL:
+MAVEN_PUBLIC_SNAPSHOT_REPO_URL:
+MAVEN_PRIVATE_RELEASE_REPO_URL:
+MAVEN_PRIVATE_SNAPSHOT_REPO_URL:
+
+# Gradle default directives
+GRADLE_DEFAULT_COMMAND_OPTIONS:
+GRADLE_DEFAULT_DIRECTIVES: clean build
+GRADLE_TEST_TARGETS: test
+
+# Stage execution
+RUN_VERSIONING: false
+RUN_BUILDS: true
+RUN_CHECKOUTS: true
+RUN_UNIT_TESTS: true
+RUN_AUDIT: false
+CREATE_TAG: false
+PUSH_CHANGES: false
+ARCHIVE_ARTIFACTS: true
+
+# General
+NOOP: false
+BUILD_RETRIES: 1
+BUILD_TIMEOUT: 360
+PARALLEL_CHUNKSIZE: 10
+PARALLEL_CHECKOUT_CHUNKSIZE: ${PARALLEL_CHUNKSIZE}
+PARALLEL_UNIT_TESTS_CHUNKSIZE: ${PARALLEL_CHUNKSIZE}
+PARALLEL_PUSH_CHUNKSIZE: ${PARALLEL_CHUNKSIZE}
+PARALLEL_TAG_CHUNKSIZE: ${PARALLEL_CHUNKSIZE}
+PARALLEL_ARCHIVING_CHUNKSIZE: ${PARALLEL_CHUNKSIZE}
+SLAVE_NODE_LABEL:
+ARTIFACT_DEPLOYER_CREDENTIALS_ID:
+BUILD_ORDER_REPORT: false
+BUILD_DATA_YAML:
+
+# SCM
+SCM_CREDENTIALS_ID:
+
+# Checkouts
+CHECKOUT_DEPTH: 20
+CHECKOUT_TIMEOUT_MINUTES: 10
+SHALLOW_CLONE: true
+
+# Cleanups
+CLEAN_ALL_CACHES: false
+CLEAN_BUILD_WORKSPACE: false
+CLEAN_CACHES_REGEX: .*-SNAPSHOT.*
+CLEAN_SCM_WORKSPACES: false
+
+# Version control properties
+RELEASE_BUILD_NUMBER: ${BUILD_NUMBER}
+RELEASE_VERSION: 1.0-SNAPSHOT
+DEPLOYMENT_FOLDER: 1.0-SNAPSHOT
+BUILD_ID_TAIL: -${RELEASE_BUILD_NUMBER}
+RELEASE_MODE: false
+
+# Commit message and list of files affected by version changes that are eligible for committing
+VERSION_MESSAGE: '[CLEANUP] updated versions via release version merger'
+VERSION_COMMIT_FILES:
+  - build.properties
+  - assembly.properties
+  - manual_assembly.properties
+  - dev_build.properties
+  - publish.properties
+  - pom.xml
+
+# Tagging
+TAG_NAME: ${RELEASE_VERSION}-RC
+TAG_MESSAGE: Tag created by ${JOB_NAME} ${BUILD_NUMBER}
+TICKET_MANAGER_URL:
+TICKET_ID_PATTERN: '\[(\w+\-\d+)\]'
+
+# Skip tagging if the RELEASE_VERSION is a SNAPSHOT
+TAG_SKIP_SNAPSHOT: true
+
+# Change detection
+CHANGES_FROM_LAST: FAILURE
+
+# Defaults for Job properties
+JOB_ITEM_DEFAULTS:
+  # SCM behaviour
+  scmUrl: ''
+  scmBranch: master
+  scmRevision: ''
+  scmCredentials: ${SCM_CREDENTIALS_ID}
+  scmScanInterval: ''
+  scmPoll: false
+
+  # Build
+  buildFramework: MAVEN
+  settingsFile: ''
+  buildFile: ''
+  root: ''
+  directives: ''
+  script: ''
+
+  # Testing
+  testable: true
+  testsArchivePattern: ${ARCHIVE_TESTS_PATTERN}
+
+  # Archiving
+  archivable: false
+
+  # Execution
+  execType: FORCE
+  parallelize: false
+  atomicScmCheckout: false
+  versionProperty: ''
+  dockerImage: ''
+  timeout: 0
+
+  # External job triggering
+  asynchronous: false
+  properties:
+  targetJobName: ''
+  passOnBuildParameters: true
+
+  # Pull request config for multi branch minions
+  prReportStatus: true
+  prDirectives: ${directives}
+  prScan: true
+  prMerge: true
+  prExecType: AUTO
+  prStatusLabel: ''
+
+  # Code audit
+  auditable: false
+
+# Build failover settings
+IGNORE_PIPELINE_FAILURE: false
+
+# Slack Integration
+SLACK_INTEGRATION: false
+SLACK_CHANNEL:
+SLACK_TEAM_DOMAIN:
+SLACK_CREDENTIALS_ID:
+
+# Archiving
+ARCHIVING_EXCLUDE_PATTERN: '(.*/.git/.*)' #exclusion group
+ARCHIVING_PATH_GROUP_REGEX: '.*/(target|dist|build)/(?:(?!.*(dependencies)).*/)?'
+ARCHIVING_CONFIG: ${BUILD_CONFIG_ROOT_PATH}/artifacts/manifest.yaml
+ARCHIVE_TESTS_PATTERN: '**/bin/**/TEST*.xml, **/target/**/TEST*.xml, **/build/**/*Test.xml, **/target/**/test*.xml'
+
+# Security parameters
+RUN_NEXUS_LIFECYCLE: false
+RUN_DEPENDENCY_CHECK: false
+PARALLEL_SECURITY_SCAN_CHUNKSIZE: 2
+NEXUS_IQ_STAGE: 'build'
+VULNERABILITY_DATABASE_PATH:
+DEPENDENCY_CHECK_SCAN_PATTERN: '**/*.jar'
+DEPENDENCY_CHECK_SUPPRESSION_PATH:
+DEPENDENCY_CHECK_REPORT_PATTERN: '**/dependency-check-report.xml'
+
+# Minions
+USE_MINION_JOBS: false
+USE_MINION_MULTIBRANCH_JOBS: false
+MINIONS_FOLDER: ${JOB_NAME}-jobs
+MINION_POLL_CRON_INTERVAL:
+MINION_SCAN_INTERVAL: 10
+
+# Docker
+DOCKER_IMAGE_HOST:
+DOCKER_REGISTRY_URL:
+
+# log rotator
+MINION_LOGS_TO_KEEP: 30
+LOGS_TO_KEEP: 45
+ARTIFACTS_TO_KEEP: 3

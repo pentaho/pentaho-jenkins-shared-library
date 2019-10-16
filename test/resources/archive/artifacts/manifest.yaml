@@ -1,0 +1,42 @@
+#
+# This file is the manifest to determine which built items are copied to the
+# hosted/Box file server locations. The versions that are specified within
+# parenthesis below *must* match the versions from the version.properties file.
+# They can also be overridden by passing values to the harvester script. ${see -versions}.
+# It is best to keep the files and folders alphabetized because it makes it easier
+# to compare the manifest to the filesystem. The exception to this is the ee/ce folder
+# since most of the important artifacts are in the ee folder.
+#
+
+# Sample manifest file for testing purposes
+
+#EE Stuff
+ee:
+    client-tools:
+        - pad-ee-${platform.version}-dist.zip
+    installers:
+        - pentaho-business-analytics-${platform.version}-x64.exe
+    plugins:
+        - paz-plugin-ee-${platform.version}-dist.zip
+    server:
+        - pentaho-server-ee-${platform.version}-dist.zip
+    shims:
+        - pentaho-big-data-ee-cdh512-package-${pentaho-hadoop-shims.version}-dist.zip
+    upgrade:
+        - pentaho-upgrade-utility-${platform.version}-ba.zip
+
+#CE Stuff
+ce:
+    client-tools:
+        - pad-ce-${platform.version}.zip
+    plugins:
+        - kettle-sdk-plugin-assembly-${platform.version}.zip
+    server:
+        - pentaho-server-ce-${platform.version}.zip
+    shims:
+        - pentaho-hadoop-shims-cdh512-package-${pentaho-hadoop-shims.version}-dist.zip
+    other:
+        - pre-classic-sdk-${platform.version}.zip
+
+# Testable items, but not customer hand-off items
+not-for-release:
