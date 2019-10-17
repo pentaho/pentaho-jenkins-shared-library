@@ -9,6 +9,8 @@ import org.hitachivantara.ci.JobItem
 
 interface Builder {
 
+  String getExecutionCommand()
+
   /**
    * Returns a closure to execute the job item build
    * @return

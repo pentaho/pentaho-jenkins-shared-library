@@ -62,24 +62,24 @@ class TestLogReport extends BasePipelineSpecification {
         '    General error message 1\n' +
         '  [Build]\n' +
         '    - job1 @ master\n' +
-        '        - git@git:org/repo-1.git\n' +
-        '          TITLE\n' +
+        '      - git@git:org/repo-1.git\n' +
+        '        TITLE\n' +
         '    - job2 @ master\n' +
-        '        - git@git:org/repo-2.git\n' +
-        '          TITLE\n' +
+        '      - git@git:org/repo-2.git\n' +
+        '        TITLE\n' +
         '    General error message 3\n' +
         '    General error message 4\n' +
         '  [Test]\n' +
         '    - job4 @ master\n' +
-        '        - git@git:org/repo-4.git\n' +
-        '          TITLE\n' +
+        '      - git@git:org/repo-4.git\n' +
+        '        TITLE\n' +
         'Warnings:\n' +
         '  [Versions]\n' +
         '    General error message 2\n' +
         '  [Test]\n' +
         '    - job3 @ master\n' +
-        '        - git@git:org/repo-3.git\n' +
-        '          TITLE\n' +
+        '      - git@git:org/repo-3.git\n' +
+        '        TITLE\n' +
         'Timings:\n' +
         '  No timings\n' +
         'Releases:\n' +

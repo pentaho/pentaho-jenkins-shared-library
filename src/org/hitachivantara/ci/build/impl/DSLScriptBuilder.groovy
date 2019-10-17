@@ -31,8 +31,14 @@ class DSLScriptBuilder implements IBuilder, Builder, Serializable {
     this.buildData = buildData
   }
 
-  Closure getExecution() {
+  @Override
+  String getExecutionCommand() {
     throw new BuilderException('Not yet implemented')
+  }
+
+  @Override
+  Closure getExecution() {
+    getBuildClosure(jobItem)
   }
 
   @Override

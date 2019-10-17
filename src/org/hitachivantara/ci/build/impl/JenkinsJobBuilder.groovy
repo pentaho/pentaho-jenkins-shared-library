@@ -7,6 +7,7 @@ package org.hitachivantara.ci.build.impl
 
 import org.hitachivantara.ci.JobItem
 import org.hitachivantara.ci.build.Builder
+import org.hitachivantara.ci.build.BuilderException
 import org.hitachivantara.ci.build.IBuilder
 import org.hitachivantara.ci.jenkins.JobBuild
 import org.hitachivantara.ci.config.BuildData
@@ -35,6 +36,11 @@ class JenkinsJobBuilder implements IBuilder, Builder, Serializable {
     this.dsl = dsl
     this.jobItem = jobItem
     this.buildData = buildData
+  }
+
+  @Override
+  String getExecutionCommand() {
+    throw new BuilderException('Not yet implemented')
   }
 
   @Override

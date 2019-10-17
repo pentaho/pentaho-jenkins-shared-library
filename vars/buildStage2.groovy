@@ -4,11 +4,16 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 import groovy.time.TimeCategory
+import hudson.model.Run
+import org.hitachivantara.ci.GroovyUtils
 import org.hitachivantara.ci.JobItem
 import org.hitachivantara.ci.jenkins.JobBuild
 import org.hitachivantara.ci.config.BuildData
 import org.hitachivantara.ci.build.BuilderFactory
 import org.hitachivantara.ci.jenkins.MinionHandler
+import org.jenkinsci.plugins.workflow.support.steps.build.RunWrapper
+
+import java.util.regex.Pattern
 
 import static org.hitachivantara.ci.build.helper.BuilderUtils.prepareForExecution
 import static org.hitachivantara.ci.config.LibraryProperties.BUILD_RETRIES
@@ -64,6 +69,7 @@ void runStage(BuildData buildData) {
 
         // test archiving
         Closure testArchiving = {
+          parseLogs(jobItem)
           if (buildData.archiveTests) {
             log.debug "Archiving tests for job item ${jobItem.jobID} with pattern ${jobItem.testsArchivePattern}"
             List paths = jobItem.modulePaths ?: [jobItem.buildWorkDir]
@@ -142,4 +148,18 @@ Closure getItemExecution(JobItem jobItem) {
   }
 
   return execution
+}
+
+void parseLogs(JobItem jobItem) {
+  BuildData buildData = BuildData.instance
+
+  RunWrapper build = currentBuild
+  Run run = build.rawBuild
+  List<String> logs = run.getLog(1000)
+
+  String errors = GroovyUtils.grep(logs, Pattern.compile('.*\\[ERROR].*')).join('\n')
+  String warnings = GroovyUtils.grep(logs, Pattern.compile('.*\\[WARNING].*')).join('\n')
+
+  if (errors) buildData.error(jobItem, errors)
+  if (warnings) buildData.warning(jobItem, warnings)
 }

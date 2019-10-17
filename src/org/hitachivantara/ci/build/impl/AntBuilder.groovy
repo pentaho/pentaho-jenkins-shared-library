@@ -36,6 +36,11 @@ class AntBuilder implements IBuilder, Builder, Serializable {
   }
 
   @Override
+  String getExecutionCommand() {
+    throw new BuilderException('Not yet implemented')
+  }
+
+  @Override
   Closure getExecution() {
     throw new BuilderException('Not yet implemented')
   }
