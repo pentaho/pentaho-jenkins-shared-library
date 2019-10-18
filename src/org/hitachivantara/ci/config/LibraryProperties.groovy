@@ -156,6 +156,7 @@ class LibraryProperties implements Serializable {
   //** Pull Requests **
   //*******************
   public static final String PR_STATUS_REPORTS = 'PR_STATUS_REPORTS'
+  public static final String PR_SLACK_CHANNEL = 'PR_SLACK_CHANNEL'
 
   //***************
   //** Got tired **
