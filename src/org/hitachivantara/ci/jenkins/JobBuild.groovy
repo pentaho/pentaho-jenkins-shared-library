@@ -3,9 +3,10 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
+
 package org.hitachivantara.ci.jenkins
 
-
+import hudson.model.Result
 import org.jenkinsci.plugins.workflow.cps.CpsScript
 import org.jenkinsci.plugins.workflow.support.steps.build.RunWrapper
 
@@ -42,7 +43,7 @@ class JobBuild {
         parameters: parameters
       )
       if (jobRun && !async) {
-        if (jobRun.result == 'FAILURE') {
+        if (jobRun.resultIsWorseOrEqualTo(Result.FAILURE.toString())) {
           throw new JobException("Job '${jobName}' execution failed")
         } else {
           steps.job.setBuildResult(jobRun.result)
