@@ -5,14 +5,14 @@
  */
 package org.hitachivantara.ci
 
-import org.hitachivantara.ci.config.FilteredMapWithDefault
+import org.hitachivantara.ci.config.ConfigurationMap
 import spock.lang.Specification
 
 class TestMapWrapper extends Specification {
 
   def "test getInt return's an Integer"() {
     given:
-      FilteredMapWithDefault map = new FilteredMapWithDefault([:])
+      ConfigurationMap map = new ConfigurationMap([:])
       map.putAll(defaults)
 
     expect: "asking for the specific type should return anything but null"
@@ -28,7 +28,7 @@ class TestMapWrapper extends Specification {
 
   def "test getDouble return's a Double"() {
     given:
-      FilteredMapWithDefault map = new FilteredMapWithDefault([:])
+      ConfigurationMap map = new ConfigurationMap([:])
       map.putAll(defaults)
 
     expect: "asking for the specific type should return anything but null"
@@ -44,7 +44,7 @@ class TestMapWrapper extends Specification {
 
   def "test getBool return's a Boolean"() {
     given:
-      FilteredMapWithDefault map = new FilteredMapWithDefault([:])
+      ConfigurationMap map = new ConfigurationMap([:])
       map.putAll(defaults)
 
     expect: "asking for the specific type should return anything but null"
@@ -60,7 +60,7 @@ class TestMapWrapper extends Specification {
 
   def "test getString return's a String"() {
     given:
-      FilteredMapWithDefault map = new FilteredMapWithDefault([:])
+      ConfigurationMap map = new ConfigurationMap([:])
       map.putAll(defaults)
 
     expect: "asking for the specific type should return anything but null"
@@ -76,7 +76,7 @@ class TestMapWrapper extends Specification {
 
   def "test getList return's a List"() {
     given:
-      FilteredMapWithDefault map = new FilteredMapWithDefault([:])
+      ConfigurationMap map = new ConfigurationMap([:])
       map.putAll(defaults)
 
     expect: "asking for the specific type should return anything but null"
@@ -92,7 +92,7 @@ class TestMapWrapper extends Specification {
 
   def "test getting raw map"() {
     given:
-      FilteredMapWithDefault map = new FilteredMapWithDefault([:], [
+      ConfigurationMap map = new ConfigurationMap([:], [
         PROP_1: '1',
         PROP_2: '${PROP_1} + 2',
         PROP_3: '${PROP_2} + 3'
@@ -113,7 +113,7 @@ class TestMapWrapper extends Specification {
 
   def "test plus implementation does not wrongly perform filtering"() {
     given:
-      FilteredMapWithDefault map = new FilteredMapWithDefault([:], [
+      ConfigurationMap map = new ConfigurationMap([:], [
         PROP_1: '1',
         PROP_2: '${PROP_1} + 2',
         PROP_3: '${PROP_2} + 3'
@@ -130,7 +130,7 @@ class TestMapWrapper extends Specification {
 
   def "test leftshift "() {
     given:
-      FilteredMapWithDefault map = new FilteredMapWithDefault([:], [
+      ConfigurationMap map = new ConfigurationMap([:], [
         PROP_1: [
           INNER_PROP_1: 1,
           INNER_PROP_2: 2,

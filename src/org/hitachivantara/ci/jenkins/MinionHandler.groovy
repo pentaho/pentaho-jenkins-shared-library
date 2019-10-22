@@ -10,7 +10,7 @@ import hudson.model.ItemGroup
 import org.hitachivantara.ci.JobItem
 import org.hitachivantara.ci.config.BuildData
 import org.hitachivantara.ci.config.ConfigurationException
-import org.hitachivantara.ci.config.FilteredMapWithDefault
+import org.hitachivantara.ci.config.ConfigurationMap
 import org.jenkinsci.plugins.workflow.cps.CpsScript
 
 import java.nio.file.Paths
@@ -35,6 +35,8 @@ import static org.hitachivantara.ci.config.LibraryProperties.MINION_BUILD_DATA_R
 import static org.hitachivantara.ci.config.LibraryProperties.MINION_LOGS_TO_KEEP
 import static org.hitachivantara.ci.config.LibraryProperties.MINION_PIPELINE_TEMPLATE
 import static org.hitachivantara.ci.config.LibraryProperties.MINION_POLL_CRON_INTERVAL
+import static org.hitachivantara.ci.config.LibraryProperties.OVERRIDE_JOB_PARAMS
+import static org.hitachivantara.ci.config.LibraryProperties.OVERRIDE_PARAMS
 import static org.hitachivantara.ci.config.LibraryProperties.POLL_CRON_INTERVAL
 import static org.hitachivantara.ci.config.LibraryProperties.PR_SLACK_CHANNEL
 import static org.hitachivantara.ci.config.LibraryProperties.PR_STATUS_REPORTS
@@ -102,7 +104,7 @@ class MinionHandler {
         String script = steps.resolveTemplate(templateSource + [
           parameters: [
             libraries : libraries,
-            properties: new FilteredMapWithDefault(buildData.buildProperties, [
+            properties: new ConfigurationMap(buildData.buildProperties, [
               (BUILD_DATA_ROOT_PATH): getBuildDataPath(),
               (BUILD_DATA_FILE)     : getBuildDataFilename(item),
             ]),
@@ -221,16 +223,19 @@ class MinionHandler {
   }
 
   /**
-   * Generate yaml data a minion
+   * Generate yaml data for a minion
    * @param jobItem
    * @return
    */
   static Map getYamlData(JobItem jobItem) {
     BuildData buildData = BuildData.instance
 
-    Map buildProperties = [:]
+    Map buildProperties = new ConfigurationMap()
     buildProperties << buildData.pipelineProperties
-    buildProperties << buildData.pipelineParams
+    buildProperties << buildData.pipelineParams.findAll { String k, v ->
+      !(k in [OVERRIDE_PARAMS, OVERRIDE_JOB_PARAMS])
+    }
+
     buildProperties.put(BUILD_PLAN_ID, jobItem.jobID)
     buildProperties.put(USE_MINION_JOBS, false)
     buildProperties.put(USE_MINION_MULTIBRANCH_JOBS, false)

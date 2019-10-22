@@ -6,8 +6,6 @@
 package org.hitachivantara.ci.build
 
 import org.hitachivantara.ci.JobItem
-import org.hitachivantara.ci.config.BuildData
-import org.jenkinsci.plugins.workflow.cps.CpsScript
 
 abstract class BuilderFactory implements Serializable {
 
@@ -19,21 +17,21 @@ abstract class BuilderFactory implements Serializable {
    * @deprecated use {@link #builderFor(org.hitachivantara.ci.JobItem)}
    */
   @Deprecated
-  static IBuilder getBuildManager(final JobItem ji, Map builderData) {
-    builderFor(builderData.dsl as Script, ji) as IBuilder
+  static IBuilder getBuildManager(final JobItem ji, Map ignored) {
+    builderFor(ji) as IBuilder
   }
 
   /**
-   * Provides the builder for the given Job Item
-   * @param dsl
+   * Provides the builder for the given Job Item and execution id
+   * @param id
    * @param jobItem
    * @return
    */
-  static Builder builderFor(Script dsl = {} as CpsScript, JobItem jobItem) {
+  static Builder builderFor(String id = null, JobItem jobItem) {
     BuildFramework framework = jobItem.buildFramework
-    BuildData buildData = BuildData.instance
 
     if (!framework) throw new BuildFrameworkException("No build framework defined for item ${jobItem.jobID}")
-    framework.builder.newInstance(dsl, buildData, jobItem)
+    framework.builder.newInstance(id, jobItem)
   }
+
 }

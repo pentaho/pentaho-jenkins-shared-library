@@ -35,7 +35,7 @@ class PullRequestReport implements Report {
     RunWrapper build = steps.currentBuild
 
     // Any pull request will have only one jobItem
-    def builder = BuilderFactory.builderFor(steps, buildData.allItems.first())
+    def builder = BuilderFactory.builderFor(buildData.allItems.first()) // TODO can still have more commands across multiple stages, adjust in the future
     Boolean failed = build.resultIsWorseOrEqualTo(Result.FAILURE.toString())
     String status = failed ? emoji.FAILURE : build.resultIsWorseOrEqualTo(Result.UNSTABLE.toString()) ? emoji.WARNING : emoji.SUCCESS
 

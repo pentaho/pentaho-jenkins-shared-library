@@ -8,7 +8,7 @@ package org.hitachivantara.ci
 import com.cloudbees.groovy.cps.NonCPS
 import org.hitachivantara.ci.build.BuildFramework
 import org.hitachivantara.ci.build.BuildFrameworkException
-import org.hitachivantara.ci.config.FilteredMapWithDefault
+import org.hitachivantara.ci.config.ConfigurationMap
 
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -96,7 +96,7 @@ class JobItem implements Serializable {
     Map jobDefaults = buildProperties.JOB_ITEM_DEFAULTS ?: [:]
 
     // init
-    data = new FilteredMapWithDefault(buildProperties)
+    data = new ConfigurationMap(buildProperties)
 
     // set given configuration
     configurable.each { String configKey ->
@@ -170,6 +170,24 @@ class JobItem implements Serializable {
     data.scmBranch = buildProperties[BRANCH_NAME] ?: scmBranch
   }
 
+  @NonCPS
+  void setDirectives(directives) {
+    if (directives instanceof Map) {
+      data.directives = new ConfigurationMap(data, directives)
+    } else {
+      data.directives = directives as String
+    }
+  }
+
+  @NonCPS
+  void setPrDirectives(directives) {
+    if (directives instanceof Map) {
+      data.prDirectives = new ConfigurationMap(data, directives)
+    } else {
+      data.prDirectives = directives as String
+    }
+  }
+
   /**
    * Use the setter if it's available, set on the data directly if not
    * this allows us to do extra treatment on input in the setter if needed.
@@ -238,12 +256,8 @@ class JobItem implements Serializable {
     scmInfo.changeLog
   }
 
-  void setChanged(Boolean changed) {
-    data.changed = changed
-  }
-
-  Boolean isChanged() {
-    data.changed
+  Boolean hasChangeLog() {
+    scmInfo.containsKey('changeLog')
   }
 
   String getScmOrganization() {
@@ -262,16 +276,33 @@ class JobItem implements Serializable {
     data.buildFramework as BuildFramework
   }
 
-  String getDirectives() {
-    // if CHANGE_ID exists means we are building a pull request, use PR directives
-    (buildProperties[CHANGE_ID] && data.prDirectives) ? data.prDirectives : data.directives
+  String getDirectives(String id = null) {
+    if (isPullRequest() && data.prDirectives) {
+      if (id && data.prDirectives instanceof Map) {
+        return data.prDirectives[id]
+      }
+      return data.prDirectives
+    } else {
+      if (id && data.directives instanceof Map) {
+        return data.directives[id]
+      }
+      return data.directives
+    }
   }
 
-  String updateDirectives(String directives) {
-    if (buildProperties[CHANGE_ID]) {
-      data.prDirectives = directives
+  String updateDirectives(String id = null, String directives) {
+    if (isPullRequest()) {
+      if (id && data.prDirectives instanceof Map) {
+        data.prDirectives[id] = directives
+      } else {
+        data.prDirectives = directives
+      }
     } else {
-      data.directives = directives
+      if (id && data.directives instanceof Map) {
+        data.directives[id] = directives
+      } else {
+        data.directives = directives
+      }
     }
   }
 
@@ -284,8 +315,7 @@ class JobItem implements Serializable {
   }
 
   ExecutionType getExecType() {
-    // if CHANGE_ID exists means we are building a pull request, use PR execType
-    ((buildProperties[CHANGE_ID] && data.prExecType) ? data.prExecType : data.execType) as ExecutionType
+    ((isPullRequest() && data.prExecType) ? data.prExecType : data.execType) as ExecutionType
   }
 
   String getVersionProperty() {
@@ -350,6 +380,10 @@ class JobItem implements Serializable {
 
   Boolean isParallel() {
     data.parallelize
+  }
+
+  void setSkip(Boolean skip) {
+    data.skip = skip
   }
 
   Boolean isSkip() {
@@ -525,5 +559,9 @@ class JobItem implements Serializable {
         repository  : repo,
         fullName    : "${org}/${repo}".toString()
     ]
+  }
+
+  Boolean isPullRequest() {
+    buildProperties[CHANGE_ID] as boolean
   }
 }

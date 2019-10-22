@@ -17,7 +17,7 @@ class ParallelItemWorkStage extends ItemWorkStage {
   static final String PARALLEL_SIZE_PREFIX = 'PARALLEL_SIZE_'
 
   Closure<Boolean> itemChunkInclusionCriteria = { List<JobItem> chunk, JobItem next -> true }
-  Closure<Collection<Collection<JobItem>>> itemPreparation = { List<JobItem> items -> [items] }
+  Closure<Collection<Collection<JobItem>>> itemExpansion = { List<JobItem> items -> [items] }
 
   Boolean ignoreGroups = false
 
@@ -36,7 +36,7 @@ class ParallelItemWorkStage extends ItemWorkStage {
 
     buildData.buildMap.each { String itemGroup, List<JobItem> items ->
       List<JobItem> enabledItems = items.findAll { JobItem item -> !item.execNoop }
-      List<List<JobItem>> workableItemGroups = itemPreparation.call(itemFilter.call(enabledItems))
+      List<List<JobItem>> workableItemGroups = itemExpansion.call(itemFilter.call(enabledItems))
 
       if (!workableItemGroups) {
         steps.utils.createStageEmpty(label)
@@ -61,7 +61,7 @@ class ParallelItemWorkStage extends ItemWorkStage {
   void runAll() {
     // Collect all job items into a single list of workable items
     List<JobItem> enabledItems = buildData.allItems.findAll { JobItem item -> !item.execNoop }
-    List<JobItem> workableItems = itemPreparation.call(itemFilter.call(enabledItems)).flatten()
+    List<JobItem> workableItems = itemExpansion.call(itemFilter.call(enabledItems)).flatten()
 
     if (!workableItems) {
       steps.utils.createStageEmpty(label)

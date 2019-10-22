@@ -6,11 +6,13 @@
 
 import groovy.transform.Field
 import org.hitachivantara.ci.FileUtils
+import org.hitachivantara.ci.GroovyUtils
 import org.hitachivantara.ci.JobItem
 import org.hitachivantara.ci.ScmUtils
 import org.hitachivantara.ci.archive.ArchiveException
 import org.hitachivantara.ci.archive.ArchivingHelper
 import org.hitachivantara.ci.build.BuilderFactory
+import org.hitachivantara.ci.build.helper.BuilderUtils
 import org.hitachivantara.ci.config.BuildData
 import org.hitachivantara.ci.stages.ConfigStage
 import org.hitachivantara.ci.stages.ParallelItemWorkStage
@@ -18,8 +20,6 @@ import org.hitachivantara.ci.stages.SimpleStage
 import org.hitachivantara.ci.github.GitHubManager
 import org.hitachivantara.ci.jenkins.MinionHandler
 
-import static org.hitachivantara.ci.GroovyUtils.unique
-import static org.hitachivantara.ci.build.helper.BuilderUtils.prepareForExecution
 import static org.hitachivantara.ci.config.LibraryProperties.BUILD_HOSTING_ROOT
 import static org.hitachivantara.ci.config.LibraryProperties.BUILD_RETRIES
 import static org.hitachivantara.ci.config.LibraryProperties.CLEAN_ALL_CACHES
@@ -81,13 +81,16 @@ void version(String id = 'version', String label = '') {
 void build(String id = 'build', String label = '') {
   new ParallelItemWorkStage(id: id, label: label ?: id.capitalize(),
     allowMinions: true,
-    itemPreparation: { List<JobItem> items ->
-      prepareForExecution(items)
+    itemFilter: { List<JobItem> items ->
+      BuilderUtils.applyChanges(id, items)
+      items.findAll { JobItem item -> !item.skip }
+    },
+    itemExpansion: { List<JobItem> items ->
+      BuilderUtils.expand(id, items)
     },
     itemExecution: { JobItem item ->
-      BuilderFactory
-        .getBuildManager(item, [buildData: buildData, dsl: this])
-        .getBuildClosure(item)
+      BuilderFactory.builderFor(id, item)
+        .getExecution()
         .call()
     }
   ).run()
@@ -98,15 +101,15 @@ void test(String id = 'test', String label = '') {
     ignoreGroups: true,
     allowMinions: true,
     itemFilter: { List<JobItem> items ->
-      items.findAll { JobItem item -> item.testable }
+      BuilderUtils.applyChanges(id, items)
+      items.findAll { JobItem item -> item.testable && !item.skip }
     },
-    itemPreparation: { List<JobItem> items ->
-      prepareForExecution(items)
+    itemExpansion: { List<JobItem> items ->
+      BuilderUtils.expand(id, items)
     },
     itemExecution: { JobItem item ->
-      BuilderFactory
-        .getBuildManager(item, [buildData: buildData, dsl: this])
-        .getTestClosure(item)
+      BuilderFactory.builderFor(id, item)
+        .getExecution()
         .call()
     },
     itemPostExecution: { JobItem item ->
@@ -118,11 +121,15 @@ void test(String id = 'test', String label = '') {
 void buildAndTest(String id = 'build', String label = '') {
   new ParallelItemWorkStage(id: id, label: label ?: id.capitalize(),
     allowMinions: true,
-    itemPreparation: { List<JobItem> items ->
-      prepareForExecution(items)
+    itemFilter: { List<JobItem> items ->
+      BuilderUtils.applyChanges(id, items)
+      items.findAll { JobItem item -> !item.skip }
+    },
+    itemExpansion: { List<JobItem> items ->
+      BuilderUtils.expand(id, items)
     },
     itemExecution: { JobItem item ->
-      BuilderFactory.builderFor(item)
+      BuilderFactory.builderFor(id, item)
         .getExecution()
         .call()
     },
@@ -203,7 +210,7 @@ void push(String id = 'push', String label = '') {
   new ParallelItemWorkStage(id: id, label: label ?: id.capitalize(),
     ignoreGroups: true,
     itemFilter: { List<JobItem> items ->
-      unique(items, { JobItem item -> item.scmID })
+      GroovyUtils.unique(items, { JobItem item -> item.scmID })
     },
     itemExecution: { JobItem item ->
       utils.pushItem(item)
@@ -218,7 +225,7 @@ void tag(String id = 'tag', String label = '') {
   new ParallelItemWorkStage(id: id, label: label ?: id.capitalize(),
     ignoreGroups: true,
     itemFilter: { List<JobItem> items ->
-      unique(items, { JobItem item -> item.scmID }) as List
+      GroovyUtils.unique(items, { JobItem item -> item.scmID }) as List
     },
     itemExecution: { JobItem item ->
       utils.tagItem(item, tagName, tagMessage)
@@ -230,16 +237,16 @@ void tag(String id = 'tag', String label = '') {
   ).run()
 }
 
-void audit(String id = 'audit', String label = '') {
+void sonar(String id = 'sonar', String label = '') {
   new ParallelItemWorkStage(id: id, label: label ?: id.capitalize(),
     ignoreGroups: true,
     allowMinions: true,
     itemFilter: { List<JobItem> items ->
-      items.findAll { JobItem item -> item.auditable }
+      BuilderUtils.applyChanges(id, items)
+      items.findAll { JobItem item -> !item.skip && item.auditable }
     },
     itemExecution: { JobItem item ->
-      // strictly sonar for now and review later, it's all we got really implemented anyway
-      BuilderFactory.builderFor(item)
+      BuilderFactory.builderFor(id, item)
         .getSonarExecution()
         .call()
     }

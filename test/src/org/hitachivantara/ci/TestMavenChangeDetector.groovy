@@ -63,7 +63,7 @@ class TestMavenChangeDetector extends BasePipelineSpecification {
   def "no previous build yields commands"() {
     setup:
       JobItem jobItem = new JobItem(buildFramework: 'Maven', execType: 'auto', directives: 'clean install' )
-      MavenBuilder builder = BuilderFactory.builderFor(mockScript, jobItem) as MavenBuilder
+      MavenBuilder builder = BuilderFactory.builderFor(jobItem) as MavenBuilder
 
     when: "there are no successful builds"
       def wrapper = GroovyMock(RunWrapper) {
@@ -114,7 +114,7 @@ class TestMavenChangeDetector extends BasePipelineSpecification {
         [buildFramework: 'Maven', execType: 'auto'] + overrides,
         [BUILDS_ROOT_PATH: 'test/resources/multi-module-profiled-project']
       )
-      MavenBuilder builder = BuilderFactory.builderFor(mockScript, jobItem) as MavenBuilder
+      MavenBuilder builder = BuilderFactory.builderFor(jobItem) as MavenBuilder
 
     when: "there are changes present"
       jobItem.changeLog = changes
@@ -219,7 +219,7 @@ class TestMavenChangeDetector extends BasePipelineSpecification {
       configRule.addProperty('BUILDS_ROOT_PATH', 'test/resources/multi-module-profiled-project')
       JobItem jobItem = configRule.newJobItem(['buildFramework': 'Maven', 'execType': 'auto'] + overrides)
       jobItem.changeLog = changes
-      MavenBuilder builder = BuilderFactory.builderFor(mockScript, jobItem) as MavenBuilder
+      MavenBuilder builder = BuilderFactory.builderFor(jobItem) as MavenBuilder
 
     when: "there are changes present"
       jobItem.changeLog = changes
@@ -278,7 +278,7 @@ class TestMavenChangeDetector extends BasePipelineSpecification {
       JobItem jobItem = configRule.newJobItem(['buildFramework': 'Maven', 'execType': 'auto'])
       ScmUtils.setCheckoutMetadata(jobItem, [GIT_URL: 'test', GIT_BRANCH: 'origin/master'])
 
-      MavenBuilder builder = BuilderFactory.builderFor(mockScript, jobItem) as MavenBuilder
+      MavenBuilder builder = BuilderFactory.builderFor(jobItem) as MavenBuilder
       configRule.addProperty(LibraryProperties.CHANGES_FROM_LAST, 'SUCCESS')
       jobItem.changeLog = ScmUtils.calculateChanges(mockScript, jobItem)
 

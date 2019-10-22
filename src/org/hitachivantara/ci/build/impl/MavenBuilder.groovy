@@ -9,11 +9,10 @@ package org.hitachivantara.ci.build.impl
 import com.cloudbees.groovy.cps.NonCPS
 import org.hitachivantara.ci.JobItem
 import org.hitachivantara.ci.ScmUtils
-import org.hitachivantara.ci.build.Builder
+import org.hitachivantara.ci.build.BuildFramework
 import org.hitachivantara.ci.build.BuilderException
 import org.hitachivantara.ci.build.IBuilder
 import org.hitachivantara.ci.build.SonarAnalyser
-import org.hitachivantara.ci.config.BuildData
 import org.hitachivantara.ci.maven.tools.CommandBuilder
 import org.hitachivantara.ci.maven.tools.FilteredProjectDependencyGraph
 import org.hitachivantara.ci.maven.tools.MavenModule
@@ -33,58 +32,44 @@ import static org.hitachivantara.ci.config.LibraryProperties.BRANCH_NAME
 import static org.hitachivantara.ci.config.LibraryProperties.CHANGE_ID
 import static org.hitachivantara.ci.config.LibraryProperties.CHANGE_TARGET
 import static org.hitachivantara.ci.config.LibraryProperties.JENKINS_JDK_FOR_BUILDS
-import static org.hitachivantara.ci.config.LibraryProperties.JENKINS_MAVEN_FOR_BUILDS
 import static org.hitachivantara.ci.config.LibraryProperties.LIB_CACHE_ROOT_PATH
-import static org.hitachivantara.ci.config.LibraryProperties.MAVEN_DEFAULT_COMMAND_OPTIONS
-import static org.hitachivantara.ci.config.LibraryProperties.MAVEN_DEFAULT_DIRECTIVES
-import static org.hitachivantara.ci.config.LibraryProperties.MAVEN_OPTS
-import static org.hitachivantara.ci.config.LibraryProperties.MAVEN_RESOLVE_REPO_URL
-import static org.hitachivantara.ci.config.LibraryProperties.MAVEN_PUBLIC_RELEASE_REPO_URL
-import static org.hitachivantara.ci.config.LibraryProperties.MAVEN_PUBLIC_SNAPSHOT_REPO_URL
-import static org.hitachivantara.ci.config.LibraryProperties.MAVEN_PRIVATE_RELEASE_REPO_URL
-import static org.hitachivantara.ci.config.LibraryProperties.MAVEN_PRIVATE_SNAPSHOT_REPO_URL
-import static org.hitachivantara.ci.config.LibraryProperties.MAVEN_SETTINGS
 import static org.hitachivantara.ci.config.LibraryProperties.MAVEN_TEST_OPTS
 import static org.hitachivantara.ci.config.LibraryProperties.PR_STATUS_REPORTS
 
+class MavenBuilder extends AbstractBuilder implements IBuilder, Serializable {
 
-class MavenBuilder implements IBuilder, Builder, Serializable {
+  String name = BuildFramework.MAVEN.name()
 
   // This is for using Takari Concurrent Local Repository which uses aether so to avoid the occasional .part file
   // 'resume' (see: https://github.com/takari/takari-local-repository/issues/4) issue we send this:
-  private final String BASE_MAVEN_OPTS = '-Daether.connector.resumeDownloads=false'
+  final String BASE_OPTS = '-Daether.connector.resumeDownloads=false'
 
-  private BuildData buildData
-  private JobItem jobItem
-  private Script steps
-
-  MavenBuilder(Script steps, BuildData buildData, JobItem jobItem) {
-    this.steps = steps
-    this.jobItem = jobItem
-    this.buildData = buildData
+  MavenBuilder(String id, JobItem item) {
+    this.item = item
+    this.id = id
   }
 
   @Override
   String getExecutionCommand() {
-    CommandBuilder command = getCommandBuilder(jobItem)
+    CommandBuilder command = getCommandBuilder()
     return command.build()
   }
 
   @Override
   Closure getExecution() {
     String mvnCommand = getExecutionCommand()
-    steps.log.info "Maven directives for ${jobItem.jobID}: $mvnCommand"
-    return getMvnDsl(jobItem, mvnCommand)
+    steps.log.info "Maven directives for ${item.jobID}: $mvnCommand"
+    return getMvnDsl(mvnCommand)
   }
 
   @Override
   Closure getSonarExecution() {
-    CommandBuilder command = getCommandBuilder(jobItem)
+    CommandBuilder command = getCommandBuilder()
 
     SonarAnalyser analyser = new MavenSonarAnalyser(command)
     String mvnCommand = analyser.getCommand()
-    steps.log.info "Maven SonarAnalyser directives for ${jobItem.jobID}: $mvnCommand"
-    return getMvnDsl(jobItem, mvnCommand)
+    steps.log.info "Maven SonarAnalyser directives for ${item.jobID}: $mvnCommand"
+    return getMvnDsl(mvnCommand)
   }
 
   @Override
@@ -94,31 +79,29 @@ class MavenBuilder implements IBuilder, Builder, Serializable {
 
   @Override
   Closure getBuildClosure(JobItem jobItem) {
-    CommandBuilder command = getCommandBuilder(jobItem, '-DskipTests')
+    CommandBuilder command = getCommandBuilder('-DskipTests')
     String mvnCommand = command.build()
     steps.log.info "Maven build directives for ${jobItem.jobID}: $mvnCommand"
-    return getMvnDsl(jobItem, mvnCommand)
+    return getMvnDsl(mvnCommand)
   }
 
   @Override
   Closure getTestClosure(JobItem jobItem) {
-    CommandBuilder command = getCommandBuilder(jobItem, 'test', buildData.getString(MAVEN_TEST_OPTS))
+    CommandBuilder command = getCommandBuilder('test', buildData.getString(MAVEN_TEST_OPTS))
 
     // list of goals that we want stripped from the final command
     command -= ['clean', 'validate', 'compile', 'verify', 'package', 'install', 'deploy', '-Dmaven.test.skip', '-Drelease'].join(' ')
 
     String mvnCommand = command.build()
     steps.log.info "Maven test directives for ${jobItem.jobID}: $mvnCommand"
-    return getMvnDsl(jobItem, mvnCommand)
+    return getMvnDsl(mvnCommand)
   }
 
-  MavenModule buildMavenModule(JobItem jobItem, CommandBuilder command = null) throws Exception {
-    command = command ?: getCommandBuilder(jobItem)
-
+  MavenModule buildMavenModule(CommandBuilder command) throws Exception {
     Properties properties = command.getUserProperties()
     List<String> activeProfiles = command.getActiveProfileIds()
     List<String> inactiveProfiles = command.getInactiveProfileIds()
-    String file = Paths.get(jobItem.buildWorkDir, jobItem.buildFile ?: 'pom.xml').toString()
+    String file = Paths.get(item.buildWorkDir, item.buildFile ?: item.buildFramework.buildFile).toString()
 
     try {
       return steps.buildMavenModule(
@@ -128,16 +111,16 @@ class MavenBuilder implements IBuilder, Builder, Serializable {
         userProperties: properties
       )
     } catch(Throwable e) {
-      buildData.error('Model Building', jobItem, e)
+      buildData.error('Model Building', item, e)
       throw new BuilderException("Couldn't generate a Maven Module for this project.")
     }
   }
 
-  List<MavenProjectWrapper> getActiveModules(JobItem jobItem, boolean alsoMakeParent = true) {
+  List<MavenProjectWrapper> getActiveModules(boolean alsoMakeParent = true) {
     List<MavenProjectWrapper> activeMavenProjects = []
 
-    CommandBuilder command = getCommandBuilder(jobItem)
-    MavenModule rootModule = buildMavenModule(jobItem, command)
+    CommandBuilder command = getCommandBuilder()
+    MavenModule rootModule = buildMavenModule(command)
 
     if (!command.hasOption('N')) {
       List<String> projectList = command.getProjectList()
@@ -157,7 +140,7 @@ class MavenBuilder implements IBuilder, Builder, Serializable {
 
       if (exclProjects) {
         activeMavenProjects = activeMavenProjects.findAll { MavenProjectWrapper mavenProject ->
-          !exclProjects.any { isChild(mavenProject.path, resolve(it, jobItem.root)) }
+          !exclProjects.any { isChild(mavenProject.path, resolve(it, item.root)) }
         }
       }
     }
@@ -176,26 +159,30 @@ class MavenBuilder implements IBuilder, Builder, Serializable {
 
   @Override
   List<List<JobItem>> expandItem() {
-    // Don't expand if we are a noop
-    if (jobItem.execNoop) {
-      return [[jobItem]]
+    // Check for expansion configuration
+    if (!item.parallel) {
+      return [[item]]
     }
 
-    CommandBuilder command = getCommandBuilder(jobItem)
+    CommandBuilder command = getCommandBuilder()
     // Nothing to expand if NON_RECURSIVE
     if (command.hasOption('N')) {
-      return [[jobItem]]
+      return [[item]]
     }
 
     List<String> projectList = command.getProjectList()
     List<String> exclProjects = command.getExcludedProjectList()
 
-    MavenModule rootModule = buildMavenModule(jobItem)
-    List<List<String>> activeModules = steps.projectDependencyGraph(module: rootModule, whitelist: projectList).sortedProjectsByGroups
+    MavenModule rootModule = buildMavenModule(command)
+    FilteredProjectDependencyGraph dependencyGraph = steps.projectDependencyGraph(
+      module: rootModule,
+      whitelist: projectList
+    )
+    List<List<String>> activeModules = dependencyGraph.getSortedProjectsByGroups()
 
     if (activeModules.flatten().empty) {
       // we are a leaf, nothing to expand
-      return [[jobItem]]
+      return [[item]]
     }
 
     if (exclProjects) {
@@ -218,21 +205,21 @@ class MavenBuilder implements IBuilder, Builder, Serializable {
         command << "-pl ${module}"
 
         Map newJobData = [
-          jobID       : "${jobItem.jobID} (${module})",
+          jobID       : "${item.jobID} (${module})",
           directives  : "${directives} ${command.getOptions().join(' ')}",
           parallelize : false,
-          checkoutDir : jobItem.checkoutDir,
-          buildWorkDir: jobItem.buildWorkDir,
+          checkoutDir : item.checkoutDir,
+          buildWorkDir: item.buildWorkDir,
         ]
 
-        JobItem innerJobItem = jobItem.clone()
+        JobItem innerJobItem = item.clone()
         innerJobItem.setJobData(newJobData)
         // this extra steps are needed so when archiving results, we only get this module(s) once
         // still doesn't guard us if a later jobItem calls the junit plugin again on the same folders
         // TODO: remove this when the problem of tests duplication get fixed
         String parent = new File(innerJobItem.buildFile ?: '').getParent()
         innerJobItem.setModulePaths(paths.collect {
-          Paths.get(jobItem.buildWorkDir, parent ?: '', it).toString()
+          Paths.get(item.buildWorkDir, parent ?: '', it).toString()
         } as String[])
         return innerJobItem
       }
@@ -240,7 +227,7 @@ class MavenBuilder implements IBuilder, Builder, Serializable {
     // also make parent
     command.removeOption('-pl')
     command << "-N"
-    JobItem parent = jobItem.clone()
+    JobItem parent = item.clone()
     parent.set('testable', false) // we don't want to archive the tests twice!
     parent.set('directives', "${directives} ${command.getOptions().join(' ')}")
     result.add(0, [parent])
@@ -258,76 +245,69 @@ class MavenBuilder implements IBuilder, Builder, Serializable {
    */
   @Override
   void applyScmChanges() {
-    // in a complete build (checkout, build + test),
-    // we mark this item as changed to prevent recalculating what changed in latter stages
-    if (jobItem.execAuto && !jobItem.changed) {
-      ScmUtils.setChangelog(steps, jobItem)
-      CommandBuilder command = getCommandBuilder(jobItem)
+    if (item.execAuto) {
+      item.skip = false
 
-      if (updateProjectList(command, jobItem)) {
-        steps.log.debug "Changes detected for ${jobItem.getJobID()}:", ScmUtils.getCheckoutMetadata(jobItem)
+      if (!item.hasChangeLog()) {
+        ScmUtils.setChangelog(steps, item)
+      }
 
-        if (jobItem.execType == AUTO_DOWNSTREAMS) {
+      Boolean executable = updateDirectives()
+      if (executable) {
+        steps.log.debug "Buildable changes detected for ${item.getJobID()}", ScmUtils.getCheckoutMetadata(item)
+
+        if (item.execType == AUTO_DOWNSTREAMS) {
           // change the remaining groups to FORCE
           // TODO: use some kind of dependency graph to change only the affected downstreams
-          forceRemainingJobItems(jobItem, buildData.buildMap)
+          forceRemainingJobItems(item, buildData.buildMap)
         }
       } else {
-        steps.log.debug "No changes detected for ${jobItem.getJobID()}:", ScmUtils.getCheckoutMetadata(jobItem)
-        // no changes detected, this job should be skipped
-        jobItem.set('skip', true)
+        steps.log.debug "Changes not buildable for ${item.jobID}, skipping", ScmUtils.getCheckoutMetadata(item)
+        item.skip = true
       }
     }
   }
 
-  CommandBuilder getCommandBuilder(JobItem jobItem, String... args) {
-    List<String> options = [buildData.getString(MAVEN_DEFAULT_COMMAND_OPTIONS)]
+  CommandBuilder getCommandBuilder(String... args) {
+    List<String> options = [defaultCommandOptions]
 
-    if (jobItem.buildFile) options.add("-f ${jobItem.buildFile}")
+    if (item.buildFile) options.add("-f ${item.buildFile}")
     options.addAll(args)
 
     CommandBuilder command = steps.getMavenCommandBuilder(options: options.join(' '))
-    applyBuildDirectives(command, buildData.getString(MAVEN_DEFAULT_DIRECTIVES), jobItem.directives)
+    applyBuildDirectives(command, getDefaultDirectives(id), item.getDirectives(id))
+
     return command
   }
 
-  Closure getMvnDsl(JobItem jobItem, String cmd) throws Exception {
-    String mavenSettingsFile = buildData.getString(MAVEN_SETTINGS)
-    String globalMavenSettingsFile = mavenSettingsFile
-    String mavenLocalRepoPath = "${buildData.getString(LIB_CACHE_ROOT_PATH)}/maven"
-    String mavenRepoMirror = buildData.getString(MAVEN_RESOLVE_REPO_URL)
-    String mavenPublicReleaseRepo = buildData.getString(MAVEN_PUBLIC_RELEASE_REPO_URL)
-    String mavenPublicSnapshotRepo = buildData.getString(MAVEN_PUBLIC_SNAPSHOT_REPO_URL)
-    String mavenPrivateReleaseRepo = buildData.getString(MAVEN_PRIVATE_RELEASE_REPO_URL)
-    String mavenPrivateSnapshotRepo = buildData.getString(MAVEN_PRIVATE_SNAPSHOT_REPO_URL)
+  Closure getMvnDsl(String cmd) throws Exception {
     String jdk = buildData.getString(JENKINS_JDK_FOR_BUILDS)
-    String mavenTool = buildData.getString(JENKINS_MAVEN_FOR_BUILDS)
-    String artifactDeployerCredentialsId = buildData.getString(ARTIFACT_DEPLOYER_CREDENTIALS_ID)
-    String mavenOPTS = "${BASE_MAVEN_OPTS} ${buildData.getString(MAVEN_OPTS)}"
+    String mavenOpts = "${BASE_OPTS} ${opts}"
+    String localRepoPath = "${buildData.getString(LIB_CACHE_ROOT_PATH)}/maven"
+    String deployCredentials = buildData.getString(ARTIFACT_DEPLOYER_CREDENTIALS_ID)
 
     return { ->
-      steps.dir(jobItem.buildWorkDir) {
+      steps.dir(item.buildWorkDir) {
         steps.withEnv([
-          "RESOLVE_REPO_MIRROR=${mavenRepoMirror}",
-          "PUBLIC_RELEASE_REPO_URL=${mavenPublicReleaseRepo}",
-          "PUBLIC_SNAPSHOT_REPO_URL=${mavenPublicSnapshotRepo}",
-          "PRIVATE_RELEASE_REPO_URL=${mavenPrivateReleaseRepo}",
-          "PRIVATE_SNAPSHOT_REPO_URL=${mavenPrivateSnapshotRepo}",
-          "MAVEN_OPTS=${mavenOPTS}"
+          "RESOLVE_REPO_MIRROR=${resolveRepo}",
+          "PUBLIC_RELEASE_REPO_URL=${publicReleaseRepo}",
+          "PUBLIC_SNAPSHOT_REPO_URL=${publicSnapshotRepo}",
+          "PRIVATE_RELEASE_REPO_URL=${privateReleaseRepo}",
+          "PRIVATE_SNAPSHOT_REPO_URL=${privateSnapshotRepo}",
+          "MAVEN_OPTS=${mavenOpts}"
         ]) {
-          steps.withCredentials([steps.usernamePassword(credentialsId: artifactDeployerCredentialsId,
+          steps.withCredentials([steps.usernamePassword(credentialsId: deployCredentials,
             usernameVariable: 'NEXUS_DEPLOY_USER', passwordVariable: 'NEXUS_DEPLOY_PASSWORD')]) {
 
-            if (jobItem.containerized) {
-              process("${cmd} -V -s ${mavenSettingsFile} -Dmaven.repo.local='${mavenLocalRepoPath}'", steps)
+            if (item.containerized) {
+              process("${cmd} -V -s ${settingsFile} -Dmaven.repo.local='${localRepoPath}'", steps)
             } else {
               steps.withMaven(
-                mavenSettingsFilePath: mavenSettingsFile,
-                globalMavenSettingsFilePath: globalMavenSettingsFile,
+                mavenSettingsFilePath: settingsFile,
                 jdk: jdk,
-                maven: mavenTool,
-                mavenLocalRepo: mavenLocalRepoPath,
-                mavenOpts: mavenOPTS,
+                maven: jenkinsTool,
+                mavenLocalRepo: localRepoPath,
+                mavenOpts: mavenOpts,
                 publisherStrategy: 'EXPLICIT') {
                 process(cmd, steps)
               }
@@ -339,14 +319,13 @@ class MavenBuilder implements IBuilder, Builder, Serializable {
   }
 
   /**
-   * This will update the command to best accommodate the detected scm changes.
+   * This will update the directives to best accommodate the detected scm changes.
    * Also, if any change doesn't belong to the initial project list, that change is not included.
-   * @param command
-   * @param jobItem
-   * @return true if the command can be evaluated, false otherwise
+   *
+   * @return true if the command can be executed, false otherwise
    */
-  boolean updateProjectList(CommandBuilder command, JobItem jobItem) {
-    List<String> changes = jobItem.changeLog
+  boolean updateDirectives() {
+    List<String> changes = item.changeLog
 
     // changes is null, then this is the first build or there are no previous successful builds,
     // return true to trigger a new build
@@ -356,12 +335,13 @@ class MavenBuilder implements IBuilder, Builder, Serializable {
     // return false to skip this build
     if (changes.empty) return false
 
+    CommandBuilder command = getCommandBuilder()
     List<String> projectList = command.getProjectList()
     List<String> exclProjects = command.getExcludedProjectList()
 
-    MavenModule baseModule = buildMavenModule(jobItem, command)
+    MavenModule baseModule = buildMavenModule(command)
 
-    String checkoutDir = Paths.get(jobItem.checkoutDir).toAbsolutePath().toString()
+    String checkoutDir = Paths.get(item.checkoutDir).toAbsolutePath().toString()
     String buildFileDir = relativize(baseModule.pom.parent.remote, checkoutDir)
 
     if (command.hasOption('N')) {
@@ -419,11 +399,10 @@ class MavenBuilder implements IBuilder, Builder, Serializable {
     // sorting is to help test/debug only, there is no direct gain doing this
     String changedModulePaths = changedModules.collect { it.fullPath }.sort().join(',')
     command << "-pl ${changedModulePaths}"
-    steps.log.debug "Command project list for ${jobItem.getJobID()} changed to:", changedModulePaths
+    steps.log.debug "Command project list for ${item.getJobID()} changed to:", changedModulePaths
 
-    jobItem.updateDirectives("${command.goals.join(' ')} ${command.options.join(' ')}")
-    jobItem.setChanged(true)
-    steps.log.debug "Directives for ${jobItem.getJobID()} updated to:", jobItem.directives
+    item.updateDirectives("${command.goals.join(' ')} ${command.options.join(' ')}")
+    steps.log.debug "Directives for ${item.getJobID()} updated to:", item.getDirectives(id)
 
     return true
   }
@@ -464,7 +443,6 @@ class MavenBuilder implements IBuilder, Builder, Serializable {
     @Override
     String getCommand() {
       commandBuilder << goal
-      commandBuilder << "-Dsonar"
 
       if (inclusions || exclusions) {
         commandBuilder << "-pl ${(inclusions + exclusions).join(',')}"
@@ -479,7 +457,7 @@ class MavenBuilder implements IBuilder, Builder, Serializable {
         commandBuilder << "-Dsonar.scm.revision=${steps.pullRequest.head}"
 
         if (buildData.getBool(PR_STATUS_REPORTS)) {
-          commandBuilder << "-Dsonar.pullrequest.github.repository=${jobItem.scmInfo.organization}/${jobItem.scmInfo.repository}"
+          commandBuilder << "-Dsonar.pullrequest.github.repository=${item.scmInfo.organization}/${item.scmInfo.repository}"
         }
       } else {
         commandBuilder << "-Dsonar.branch.name=${buildData.getString(BRANCH_NAME)}"

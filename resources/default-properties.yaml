@@ -137,7 +137,7 @@ JOB_ITEM_DEFAULTS:
 
   # Pull request config for multi branch minions
   prReportStatus: true
-  prDirectives: ${directives}
+  prDirectives: ''
   prScan: true
   prMerge: true
   prExecType: AUTO

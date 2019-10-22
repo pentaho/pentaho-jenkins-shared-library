@@ -109,7 +109,7 @@ class BuildDataBuilder {
     Map<String, Object> libraryDefaults = loadLibraryDefaults(defaults)
 
     // 2. Set Jenkins Environment and library defaults in this order to search for undefined values
-    Map<String, Object> buildProperties = new FilteredMapWithDefault(env ? [env, libraryDefaults] : libraryDefaults)
+    Map<String, Object> buildProperties = new ConfigurationMap(env ? [env, libraryDefaults] : libraryDefaults)
 
     // apply any param overrides given
     Map<String, Object> pipelineParams = [:]

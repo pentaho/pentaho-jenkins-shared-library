@@ -315,7 +315,7 @@ class BuilderUtils implements Serializable {
     }
 
     for (JobItem jobItem : jobItems) {
-      Builder builder = BuilderFactory.builderFor(steps, jobItem)
+      Builder builder = BuilderFactory.builderFor(jobItem)
       builder.applyScmChanges()
 
       if (!canSkipItem(jobItem, itemCheck)) {
@@ -324,6 +324,38 @@ class BuilderUtils implements Serializable {
     }
 
     return organizeItems(workableItems)
+  }
+
+  /**
+   * Expand the given items so they can be further parallelized
+   * @param items
+   * @return
+   */
+  static List<List<JobItem>> expand(String id = null, List<JobItem> items) {
+    BuildData buildData = BuildData.instance
+
+    if (buildData.useMinions) return [items]
+
+    List<List<List<JobItem>>> expandedItems = items.collect { JobItem item ->
+      BuilderFactory.builderFor(id, item).expandItem()
+    }
+
+    return organizeItems(expandedItems)
+  }
+
+  /**
+   * Apply SCM detected changes to the given items marking the ones to be skipped
+   * @param items
+   * @return
+   */
+  static void applyChanges(String id = null, List<JobItem> items) {
+    BuildData buildData = BuildData.instance
+
+    if (buildData.useMinions) return
+
+    items.each { JobItem item ->
+      BuilderFactory.builderFor(id, item).applyScmChanges()
+    }
   }
 
   /**

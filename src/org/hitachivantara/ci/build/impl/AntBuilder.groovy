@@ -3,14 +3,14 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
+
 package org.hitachivantara.ci.build.impl
 
 import org.hitachivantara.ci.JobItem
-import org.hitachivantara.ci.build.Builder
+import org.hitachivantara.ci.build.BuildFramework
 import org.hitachivantara.ci.build.BuilderException
 import org.hitachivantara.ci.build.IBuilder
 import org.hitachivantara.ci.build.helper.BuilderUtils
-import org.hitachivantara.ci.config.BuildData
 
 import static org.hitachivantara.ci.config.LibraryProperties.ANT_DEFAULT_COMMAND_OPTIONS
 import static org.hitachivantara.ci.config.LibraryProperties.ANT_DEFAULT_DIRECTIVES
@@ -21,18 +21,15 @@ import static org.hitachivantara.ci.config.LibraryProperties.JENKINS_MAVEN_FOR_B
 import static org.hitachivantara.ci.config.LibraryProperties.WORKSPACE
 
 @Deprecated
-class AntBuilder implements IBuilder, Builder, Serializable {
+class AntBuilder extends AbstractBuilder implements IBuilder, Serializable {
 
-  private BuildData buildData
-  private JobItem jobItem
-  private Script dsl
+  String name = BuildFramework.ANT.name()
 
   private final static String BASE_COMMAND = "ant"
 
-  AntBuilder(Script dsl, BuildData buildData, JobItem jobItem) {
-    this.dsl = dsl
-    this.jobItem = jobItem
-    this.buildData = buildData
+  AntBuilder(String id, JobItem item) {
+    this.item = item
+    this.id = id
   }
 
   @Override
@@ -48,13 +45,13 @@ class AntBuilder implements IBuilder, Builder, Serializable {
   @Override
   void setBuilderData(Map builderData) {
     this.buildData = builderData['buildData']
-    this.dsl = builderData['dsl']
+    this.steps = builderData['dsl']
   }
 
   @Override
   Closure getBuildClosure(JobItem jobItem) {
     if (buildData.noop || jobItem.isExecNoop()) {
-      return { -> dsl.echo "${jobItem.getJobID()} NOOP so not building ${jobItem.getScmID()}" }
+      return { -> this.steps.echo "${jobItem.getJobID()} NOOP so not building ${jobItem.getScmID()}" }
     }
 
     Map buildProperties = buildData.getBuildProperties()
@@ -80,7 +77,7 @@ class AntBuilder implements IBuilder, Builder, Serializable {
       antCmd.replaceAll(~/(?i)\s?($forbidden)\s?/, '')
     }
 
-    dsl.echo "Ant build directives for ${jobItem.getJobID()}: ${antCmd}"
+    steps.echo "Ant build directives for ${jobItem.getJobID()}: ${antCmd}"
 
     return getAntDsl(jobItem, antCmd.toString())
   }
@@ -88,7 +85,7 @@ class AntBuilder implements IBuilder, Builder, Serializable {
   @Override
   Closure getTestClosure(JobItem jobItem) {
     if (buildData.noop || jobItem.isExecNoop() || !jobItem.testable) {
-      return { -> dsl.echo "${jobItem.jobID}: skipped testing ${jobItem.scmID}" }
+      return { -> this.steps.echo "${jobItem.jobID}: skipped testing ${jobItem.scmID}" }
     }
 
     StringBuilder antCmd = new StringBuilder()
@@ -102,7 +99,7 @@ class AntBuilder implements IBuilder, Builder, Serializable {
       antCmd << " $testTargets"
     }
 
-    dsl.echo "Ant unit test build directives for ${jobItem.getJobID()}: ${antCmd}"
+    steps.echo "Ant unit test build directives for ${jobItem.getJobID()}: ${antCmd}"
 
     return getAntDsl(jobItem, antCmd.toString())
   }
@@ -114,8 +111,8 @@ class AntBuilder implements IBuilder, Builder, Serializable {
 
   @Override
   List<List<JobItem>> expandItem() {
-    dsl.log.warn "Expanding jobItem not implemented for Ant, reverting to normal"
-    [[jobItem]]
+    steps.log.warn "Expanding jobItem not implemented for Ant, reverting to normal"
+    [[item]]
   }
 
   @Override
@@ -138,13 +135,13 @@ class AntBuilder implements IBuilder, Builder, Serializable {
     Map buildProperties = buildData.getBuildProperties()
 
     return { ->
-      dsl.dir(jobItem.buildWorkDir) {
-        dsl.withEnv(["PATH+MAVEN=${dsl.tool "${buildProperties[JENKINS_MAVEN_FOR_BUILDS]}"}/bin"]) {
-          dsl.withAnt(
+      this.steps.dir(jobItem.buildWorkDir) {
+        this.steps.withEnv(["PATH+MAVEN=${this.steps.tool "${buildProperties[JENKINS_MAVEN_FOR_BUILDS]}"}/bin"]) {
+          this.steps.withAnt(
             installation: "${buildProperties[JENKINS_ANT_FOR_BUILDS]}",
             jdk: "${buildProperties[JENKINS_JDK_FOR_BUILDS]}",
           ) {
-            BuilderUtils.process(antCmd, dsl)
+            BuilderUtils.process(antCmd, this.steps)
           }
         }
       }

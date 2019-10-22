@@ -3,32 +3,27 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
+
 package org.hitachivantara.ci.build.impl
 
 import org.hitachivantara.ci.FileUtils
 import org.hitachivantara.ci.JobItem
-import org.hitachivantara.ci.build.Builder
+import org.hitachivantara.ci.build.BuildFramework
 import org.hitachivantara.ci.build.BuilderException
 import org.hitachivantara.ci.build.IBuilder
-import org.hitachivantara.ci.config.BuildData
 import org.jenkinsci.plugins.workflow.cps.CpsFlowExecution
 import org.jenkinsci.plugins.workflow.cps.CpsGroovyShellFactory
 import org.jenkinsci.plugins.workflow.cps.CpsGroovyShell
 import org.jenkinsci.plugins.workflow.job.WorkflowRun
 import org.jenkinsci.plugins.workflow.support.steps.build.RunWrapper
 
+class DSLScriptBuilder extends AbstractBuilder implements IBuilder, Serializable {
 
-class DSLScriptBuilder implements IBuilder, Builder, Serializable {
+  String name = BuildFramework.DSL_SCRIPT.name()
 
-  private BuildData buildData
-  private JobItem jobItem
-  private Script dsl
-
-
-  DSLScriptBuilder(Script dsl, BuildData buildData, JobItem jobItem) {
-    this.dsl = dsl
-    this.jobItem = jobItem
-    this.buildData = buildData
+  DSLScriptBuilder(String id, JobItem item) {
+    this.item = item
+    this.id = id
   }
 
   @Override
@@ -88,7 +83,7 @@ class DSLScriptBuilder implements IBuilder, Builder, Serializable {
 
   @Override
   List<List<JobItem>> expandItem() {
-    return [[jobItem]]
+    return [[item]]
   }
 
   @Override

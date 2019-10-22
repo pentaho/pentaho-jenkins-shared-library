@@ -81,7 +81,7 @@ class TestMavenParallelFlag extends BasePipelineSpecification {
       configRule.addProperty('BUILDS_ROOT_PATH', 'test/resources/multi-module-profiled-project')
       JobItem jobItem = configRule.newJobItem(['buildFramework': 'Maven', 'parallelize': 'true'] + overrides)
 
-      MavenBuilder builder = BuilderFactory.builderFor(mockScript, jobItem) as MavenBuilder
+      MavenBuilder builder = BuilderFactory.builderFor(jobItem) as MavenBuilder
     when:
       List items = builder.expandWorkItem(jobItem)
     then:
@@ -165,7 +165,7 @@ class TestMavenParallelFlag extends BasePipelineSpecification {
     setup:
       configRule.addProperty('BUILDS_ROOT_PATH', 'test/resources/inter-module-dependency-project')
       JobItem jobItem = configRule.newJobItem(['buildFramework': 'Maven', 'parallelize': 'true'] + overrides)
-      MavenBuilder builder = BuilderFactory.builderFor(mockScript, jobItem) as MavenBuilder
+      MavenBuilder builder = BuilderFactory.builderFor(jobItem) as MavenBuilder
     when:
       List items = builder.expandWorkItem(jobItem)
     then:
@@ -246,7 +246,7 @@ class TestMavenParallelFlag extends BasePipelineSpecification {
   }
 
   private assertBuildDirectives(JobItem jobItem, Map<String, Object> expected) {
-    MavenBuilder builder = BuilderFactory.builderFor(mockScript, jobItem) as MavenBuilder
+    MavenBuilder builder = BuilderFactory.builderFor(jobItem) as MavenBuilder
 
     Closure mvnBuild = builder.getBuildClosure(jobItem)
     mvnBuild()

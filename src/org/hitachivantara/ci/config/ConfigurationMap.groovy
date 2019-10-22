@@ -16,12 +16,12 @@ import java.util.regex.Pattern
  * not static it makes sense to just fallback to them when a property isn't found
  * on a higher priority source.
  */
-class FilteredMapWithDefault<K, V> extends LinkedHashMap<K, V> {
+class ConfigurationMap<K, V> extends LinkedHashMap<K, V> {
   private static final Pattern PROPERTY_REPLACE_PATTERN = Pattern.compile(/\$\{(?<key>[\w|_|-|\.]+)\}/)
 
   def defaults = [:]
 
-  FilteredMapWithDefault(defaults, Map initialValues = [:]) {
+  ConfigurationMap(defaults = [:], Map initialValues = [:]) {
     this.defaults = defaults
     this.putAll(initialValues)
   }
@@ -38,6 +38,7 @@ class FilteredMapWithDefault<K, V> extends LinkedHashMap<K, V> {
   }
 
   @NonCPS
+  @Override
   V get(Object key) {
     def value = super.get(key)
 
@@ -55,12 +56,14 @@ class FilteredMapWithDefault<K, V> extends LinkedHashMap<K, V> {
   }
 
   @NonCPS
+  @Override
   V put(K key, V value) {
     merge([(key): value], this)
     return get(key)
   }
 
   @NonCPS
+  @Override
   void putAll(Map<? extends K, ? extends V> source) {
     merge(source, this)
   }
@@ -88,7 +91,7 @@ class FilteredMapWithDefault<K, V> extends LinkedHashMap<K, V> {
 
   @NonCPS
   def plus(Map right) {
-    new FilteredMapWithDefault(defaults, getRawMap()) << right
+    new ConfigurationMap(defaults, getRawMap()) << right
   }
 
   @NonCPS
@@ -167,31 +170,37 @@ class FilteredMapWithDefault<K, V> extends LinkedHashMap<K, V> {
 
 
   @NonCPS
+  @Override
   boolean containsKey(Object key) {
     super.containsKey(key) || getFromDefaults(key) != null
   }
 
   @NonCPS
+  @Override
   boolean containsValue(Object value) {
     throw new UnsupportedOperationException('Operation not supported')
   }
 
   @NonCPS
+  @Override
   V remove(Object key) {
     throw new UnsupportedOperationException('Operation not supported')
   }
 
   @NonCPS
+  @Override
   void clear() {
     throw new UnsupportedOperationException('Operation not supported')
   }
 
   @NonCPS
+  @Override
   Collection<V> values() {
     throw new UnsupportedOperationException('Operation not supported')
   }
 
   @NonCPS
+  @Override
   Set<Map.Entry<K, V>> entrySet() {
     // provide a filtered set of entries
     super.entrySet().collect { Map.Entry entry ->

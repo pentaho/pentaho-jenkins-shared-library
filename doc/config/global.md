@@ -57,3 +57,42 @@ Will override all job item directives.
 ```
 
 Will override `scmBranch` for the job item `my-item-id` and the `directives` of all the other existing job items.
+
+
+### Builder Configuration
+Builder global properties. Each of these properties can be defined with the specific builder name prefixed to them.
+
+Available builders:
+- MAVEN
+- GRADLE
+- JENKINS_JOB
+- DSL_SCRIPT
+
+Some of the following options might only apply to some of the Builders.
+
+##### <BUILDER_NAME>_PRIVATE_RELEASE_REPO_URL
+Defines the url for the private repo when publishing release artifacts.
+
+##### <BUILDER_NAME>_PRIVATE_SNAPSHOT_REPO_URL
+Defines the url for the private repo when publishing snapshot artifacts.
+
+##### <BUILDER_NAME>_PUBLIC_RELEASE_REPO_URL
+Defines the url for the public repo when publishing release artifacts.
+
+##### <BUILDER_NAME>_PUBLIC_SNAPSHOT_REPO_URL
+Defines the url for the public repo when publishing snapshot artifacts.
+
+##### <BUILDER_NAME>_RESOLVE_REPO_URL
+Defines the url for repository from where dependencies should be resolved.
+
+##### <BUILDER_NAME>_OPTS
+Options for the builder.
+
+##### <BUILDER_NAME>_SETTINGS
+Path to the builder settings file.
+
+##### <BUILDER_NAME>_DEFAULT_DIRECTIVES
+Default directives defined globally so that items can use and build upon. The same format as the job item directives is expected here.
+
+##### <BUILDER_NAME>_DEFAULT_COMMAND_OPTIONS
+Default options to include on the build command.

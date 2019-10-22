@@ -53,7 +53,7 @@ class TestGradleBuild extends BasePipelineSpecification {
       JobItem jobItem = configRule.newJobItem(jobData)
       configRule.addProperty('WORKSPACE', FAKE_PATH)
     when:
-      IBuilder builder = BuilderFactory.builderFor(mockScript, jobItem)
+      IBuilder builder = BuilderFactory.builderFor(jobItem)
       Closure gradleBuild = builder.getBuildClosure(jobItem)
       gradleBuild()
 
@@ -73,7 +73,7 @@ class TestGradleBuild extends BasePipelineSpecification {
       JobItem jobItem = configRule.newJobItem(jobData)
 
     when:
-      IBuilder builder = BuilderFactory.builderFor(mockScript, jobItem)
+      IBuilder builder = BuilderFactory.builderFor(jobItem)
       Closure mvnTest = builder.getTestClosure(jobItem)
       mvnTest()
 
@@ -95,7 +95,7 @@ class TestGradleBuild extends BasePipelineSpecification {
       JobItem jobItem = configRule.newJobItem(jobData)
 
     when:
-      IBuilder builder = BuilderFactory.builderFor(mockScript, jobItem)
+      IBuilder builder = BuilderFactory.builderFor(jobItem)
       Closure gradleTester = builder.getBuildClosure(jobItem)
       gradleTester()
 

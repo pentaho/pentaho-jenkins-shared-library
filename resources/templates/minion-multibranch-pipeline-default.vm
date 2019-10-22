@@ -4,7 +4,7 @@ library(identifier: '$library', changelog: false)
 
 #set( $runCheckout = $properties.getBool('RUN_STAGE_CHECKOUT') )
 #set( $runBuild = $properties.getBool('RUN_STAGE_BUILD') )
-#set( $runAudit = $properties.getBool('RUN_STAGE_AUDIT') && $item.auditable )
+#set( $runSonar = $properties.getBool('RUN_STAGE_SONAR') && $item.auditable )
 ##
 Map defaultParams = [
   SLAVE_NODE_LABEL    : '$properties.getString('SLAVE_NODE_LABEL')',
@@ -14,7 +14,7 @@ Map defaultParams = [
 
   RUN_STAGE_CHECKOUT  : $runCheckout,
   RUN_STAGE_BUILD     : $runBuild,
-  RUN_STAGE_AUDIT     : $runAudit,
+  RUN_STAGE_SONAR     : $runSonar,
 
   OVERRIDE_PARAMS     : [:],
   OVERRIDE_JOB_PARAMS : [:]
@@ -28,7 +28,7 @@ node(params.SLAVE_NODE_LABEL ?: defaultParams.SLAVE_NODE_LABEL) {
       timeout(config.get().timeout) {
         stages.checkout()
         stages.buildAndTest()
-        stages.audit()
+        stages.sonar()
       }
     }
 

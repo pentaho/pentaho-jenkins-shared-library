@@ -122,23 +122,23 @@ class BuildData implements Serializable {
   }
 
   Integer getInt(String property) {
-    (buildProperties as FilteredMapWithDefault).getInt(property)
+    (buildProperties as ConfigurationMap).getInt(property)
   }
 
   Double getDouble(String property) {
-    (buildProperties as FilteredMapWithDefault).getDouble(property)
+    (buildProperties as ConfigurationMap).getDouble(property)
   }
 
   Boolean getBool(String property) {
-    (buildProperties as FilteredMapWithDefault).getBool(property)
+    (buildProperties as ConfigurationMap).getBool(property)
   }
 
   String getString(String property) {
-    (buildProperties as FilteredMapWithDefault).getString(property)
+    (buildProperties as ConfigurationMap).getString(property)
   }
 
   List getList(String property) {
-    (buildProperties as FilteredMapWithDefault).getList(property)
+    (buildProperties as ConfigurationMap).getList(property)
   }
 
   /******************************************/

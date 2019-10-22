@@ -3,15 +3,15 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
+
 package org.hitachivantara.ci.build.impl
 
 import org.hitachivantara.ci.JobItem
-import org.hitachivantara.ci.build.Builder
+import org.hitachivantara.ci.build.BuildFramework
 import org.hitachivantara.ci.build.BuilderException
 import org.hitachivantara.ci.build.IBuilder
 import org.hitachivantara.ci.jenkins.JobBuild
-import org.hitachivantara.ci.config.BuildData
-import org.hitachivantara.ci.config.FilteredMapWithDefault
+import org.hitachivantara.ci.config.ConfigurationMap
 
 import static org.hitachivantara.ci.config.LibraryProperties.JOB_ITEM_DEFAULTS
 import static org.hitachivantara.ci.config.LibraryProperties.VERSION_COMMIT_FILES
@@ -20,11 +20,9 @@ import static org.hitachivantara.ci.config.LibraryProperties.VERSION_COMMIT_FILE
  * This isn't really a builder but it is the best way to introduce
  * this new feature into the building system
  */
-class JenkinsJobBuilder implements IBuilder, Builder, Serializable {
+class JenkinsJobBuilder extends AbstractBuilder implements IBuilder, Serializable {
 
-  private BuildData buildData
-  private JobItem jobItem
-  private Script dsl
+  String name = BuildFramework.JENKINS_JOB.name()
 
   private static final passOnExclusions = [
     JOB_ITEM_DEFAULTS,
@@ -32,10 +30,9 @@ class JenkinsJobBuilder implements IBuilder, Builder, Serializable {
     'properties' // not sure what this one is about?
   ]
 
-  JenkinsJobBuilder(Script dsl, BuildData buildData, JobItem jobItem) {
-    this.dsl = dsl
-    this.jobItem = jobItem
-    this.buildData = buildData
+  JenkinsJobBuilder(String id, JobItem item) {
+    this.item = item
+    this.id = id
   }
 
   @Override
@@ -45,13 +42,13 @@ class JenkinsJobBuilder implements IBuilder, Builder, Serializable {
 
   @Override
   Closure getExecution() {
-    getBuildClosure(jobItem)
+    getBuildClosure(item)
   }
 
   @Override
   void setBuilderData(Map builderData) {
     this.buildData = builderData['buildData']
-    this.dsl = builderData['dsl']
+    this.steps = builderData['dsl']
   }
 
   @Override
@@ -64,7 +61,7 @@ class JenkinsJobBuilder implements IBuilder, Builder, Serializable {
 
     if (jobItem.jobProperties) {
       // to allow for filtering we need to take the properties through a filtered map
-      Map filteredProperties = new FilteredMapWithDefault(buildData.buildProperties)
+      Map filteredProperties = new ConfigurationMap(buildData.buildProperties)
       filteredProperties << jobItem.jobProperties
       parameters << filteredProperties
     }
@@ -86,7 +83,7 @@ class JenkinsJobBuilder implements IBuilder, Builder, Serializable {
 
   @Override
   List<List<JobItem>> expandItem() {
-    [[jobItem]]
+    [[item]]
   }
 
   @Override

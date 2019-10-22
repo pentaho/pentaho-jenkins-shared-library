@@ -45,9 +45,8 @@ class BuildOrderReport implements Report {
         sb << ''.padRight(indent) << "jobID:      ${jobItem.jobID}\n"
         sb << ''.padRight(indent) << "scmUrl:     ${jobItem.scmUrl}\n"
         sb << ''.padRight(indent) << "root:       ${jobItem.root}\n"
-        sb << ''.padRight(indent) << "directives: ${jobItem.directives}\n"
 
-        Builder builder = BuilderFactory.builderFor(steps, jobItem)
+        Builder builder = BuilderFactory.builderFor(jobItem)
         switch (builder) {
           case MavenBuilder:
             builder = (MavenBuilder) builder
