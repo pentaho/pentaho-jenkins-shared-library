@@ -5,6 +5,7 @@
  */
 import org.hitachivantara.ci.LogLevel
 import org.hitachivantara.ci.PrettyPrinter
+import org.hitachivantara.ci.StringUtils
 import org.hitachivantara.ci.config.BuildData
 
 import static org.hitachivantara.ci.LogLevel.ERROR
@@ -32,15 +33,13 @@ def message(LogLevel level, Object body, Object dump) {
   if (BuildData.instance.logLevel.encompasses(level)) {
     def message = "[${level.label}] " << String.valueOf(body)
     if (dump) {
+      message << "\n"
       if (dump instanceof Throwable) {
-        def dumpExclusions = ['org.codehaus', 'com.cloudbees', 'sun', 'java', 'hudson', 'org.jenkinsci', 'jenkins', 'groovy']
-        dump.getStackTrace().each { traceElement ->
-          if (!dumpExclusions.any { traceElement.className.startsWith(it) }) {
-            message << "\n  at $traceElement"
-          }
-        }
+        StringWriter w = new StringWriter()
+        StringUtils.printStackTrace(dump, new PrintWriter(w))
+        message.append(w.buffer)
       } else {
-        message << "\n" << new PrettyPrinter(dump).incrementIndent().toPrettyPrint()
+        message << new PrettyPrinter(dump).incrementIndent().toPrettyPrint()
       }
     }
     echo message.toString()
