@@ -9,6 +9,8 @@ package org.hitachivantara.ci
 import com.cloudbees.groovy.cps.NonCPS
 import com.cloudbees.groovy.cps.impl.CpsClosure
 
+import java.util.regex.Pattern
+
 /**
  * Pipeline's CPS doesn't have some groovy utilities implemented which make our lives harder.
  * Here we re-implement some of the default groovy methods in replacement.
@@ -51,5 +53,10 @@ class GroovyUtils implements Serializable {
     if (closure instanceof CpsClosure)
       throw new IllegalArgumentException("This closure needs to be synchronized in a NonCPS transformation")
     return self.sort(closure)
+  }
+
+  @NonCPS
+  static <T> List<T> grep(Collection<T> self, Pattern pattern) {
+    return self.grep(pattern)
   }
 }

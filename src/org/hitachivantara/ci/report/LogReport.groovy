@@ -3,6 +3,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
+
 package org.hitachivantara.ci.report
 
 import com.cloudbees.groovy.cps.NonCPS
@@ -52,60 +53,67 @@ class LogReport implements Report {
     steps.echo report
   }
 
+  private String printIdent(int depth = 0) {
+    ' ' * (depth << (indent >> 1))
+  }
+
   String buildStatusString(String title, Map statusData) {
     StringBuilder sb = new StringBuilder()
     sb << "${title}:"
 
     if (statusData) {
       statusData.each { String stage, Map<String, ?> allMessages ->
-        sb << '\n' << ' ' * indent
-        sb << "[${stage}]"
+        int depth = 1
+        if (stage) {
+          sb << '\n' << printIdent(depth++)
+          sb << "[${stage}]"
+        }
 
         Map stageJobItemMessages = allMessages.get(BuildStatus.Category.JOB) as Map
-        printStageJobMessages(sb, stageJobItemMessages)
+        printStageJobMessages(sb, stageJobItemMessages, depth)
 
         List<String> generalMessages = allMessages.get(BuildStatus.Category.GENERAL) as List<String>
         if (generalMessages) {
           generalMessages.each {
             String generalMessage ->
-              sb << '\n' << ' ' * indent * 2
+              sb << '\n' << printIdent(depth)
               sb << generalMessage
           }
         }
       }
     } else {
-      sb << '\n' << ' ' * indent
+      sb << '\n' << printIdent(1)
       sb << "No ${title.toLowerCase()}"
     }
 
     return sb.toString()
   }
 
-  private void printStageJobMessages(StringBuilder sb, Map stageJobItemMessages) {
+  private void printStageJobMessages(StringBuilder sb, Map stageJobItemMessages, int depth = 0) {
     if (stageJobItemMessages) {
       Map messagesToList = (limit ? stageJobItemMessages.take(limit) : stageJobItemMessages)
       Set<?> keys = messagesToList.keySet()
 
       keys.each { item ->
         // print jobID
-        sb << '\n' << ' ' * indent * 2
+        sb << '\n' << printIdent(depth)
         sb << '- ' << getId(item)
 
         if (item instanceof JobItem) {
           // print branch also
           sb << ' @ ' << item.scmBranch
-          printCommitLogs(sb, item)
+          printCommitLogs(sb, item, depth + 1)
         }
 
       }
       if (limit && stageJobItemMessages.size() > limit) {
-        sb << '\n' << ' ' * indent * 2
+        sb << '\n' << printIdent(depth)
         sb << '(...)'
       }
     }
   }
 
-  private void printCommitLogs(StringBuilder sb, JobItem jobItem) {
+  private void printCommitLogs(StringBuilder sb, JobItem jobItem, int depth = 0) {
     List<Map<String, Object>> commitLogs
     steps.dir(jobItem.checkoutDir) {
       commitLogs = ScmUtils.getCommitLog(steps, jobItem)
@@ -113,9 +121,9 @@ class LogReport implements Report {
 
     commitLogs.each { Map changelog ->
       // print commit log
-      sb << '\n' << ' ' * indent * 4
+      sb << '\n' << printIdent(depth)
       sb << '- ' << (changelog[ScmUtils.COMMIT_URL] ?: jobItem.scmUrl)
-      sb << '\n' << ' ' * indent * 4
+      sb << '\n' << printIdent(depth)
       sb << '  ' << changelog[ScmUtils.COMMIT_TITLE]
     }
   }
@@ -128,13 +136,14 @@ class LogReport implements Report {
       int longestStageName = timingData.keySet().collect { String stage -> stage.size() }.max()
 
       timingData.each { String stage, Map<String, ?> allTimings ->
+        int depth = 1
         List generalTimings = allTimings.get(BuildStatus.Category.GENERAL) as List<Long>
         Long stageTiming = generalTimings ? generalTimings.sum() : 0
 
         // stage has 0 time, it was skipped
         if (!stageTiming) return
 
-        sb << '\n' << ' ' * indent
+        sb << '\n' << printIdent(depth++)
         sb << "[${stage}]"
         sb << spacer(stage.size(), longestStageName)
         sb << "(${formatDuration(stageTiming)})"
@@ -155,19 +164,19 @@ class LogReport implements Report {
             String id = getId(timing.key)
             Long duration = timing.value
 
-            sb << '\n' << ' ' * indent * 2
+            sb << '\n' << printIdent(depth)
             sb << id
             sb << spacer(id.size(), longestJobID) << ': '
             sb << "${formatDuration(duration)}"
           }
           if (jobTimingEntries.size() > topLimit) {
-            sb << '\n' << ' ' * indent * 2
+            sb << '\n' << printIdent(depth)
             sb << "(top ${topLimit})"
           }
         }
       }
     } else {
-      sb << '\n' << ' ' * indent
+      sb << '\n' << printIdent(1)
       sb << "No ${title.toLowerCase()}"
     }
 
@@ -197,23 +206,24 @@ class LogReport implements Report {
 
     if (statusData) {
       statusData.each { String stage, Map<String, ?> allMessages ->
-        sb << '\n' << ' ' * indent
+        int depth = 1
+        sb << '\n' << printIdent(depth++)
         sb << "[${BuildData.instance.getString(TAG_NAME)}]"
 
         List<Map> generalMessages = allMessages.get(BuildStatus.Category.GENERAL) as List<Map>
         if (generalMessages) {
-          generalMessages.each {Map item ->
-              String generalMessage = item.label
-              if( item.link ) {
-                generalMessage = item.link
-              }
-              sb << '\n' << ' ' * indent * 2
-              sb << generalMessage
+          generalMessages.each { Map item ->
+            String generalMessage = item.label
+            if (item.link) {
+              generalMessage = item.link
+            }
+            sb << '\n' << printIdent(depth)
+            sb << generalMessage
           }
         }
       }
     } else {
-      sb << '\n' << ' ' * indent
+      sb << '\n' << printIdent(1)
       sb << "No ${title.toLowerCase()}"
     }
 

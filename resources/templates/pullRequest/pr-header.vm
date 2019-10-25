@@ -1,0 +1,6 @@
+#[[###]]# $status Build #if($failed)failed#{else}finished#{end} in ${duration}
+Build command:
+```console
+${command}
+```
+---

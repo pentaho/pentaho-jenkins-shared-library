@@ -3,11 +3,13 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
+
 package org.hitachivantara.ci
 
 import hudson.model.AbstractBuild
 import hudson.tasks.test.AbstractTestResultAction
 import org.hitachivantara.ci.github.GitHubManager
+import org.hitachivantara.ci.maven.tools.CommandBuilder
 import org.hitachivantara.ci.report.PullRequestReport
 import org.hitachivantara.ci.utils.ConfigurationRule
 import org.hitachivantara.ci.utils.ReplacePropertyRule
@@ -37,19 +39,34 @@ class TestPullRequestReport extends BasePipelineSpecification {
 
   def setup() {
     registerAllowedMethod('libraryResource', [Map], null)
+    configRule.setBuildMap(['test': [configRule.newJobItem('test', ['buildFramework': 'Maven'])]])
+
+    registerAllowedMethod('getMavenCommandBuilder', [Map], { Map params ->
+      def cmd = new CommandBuilder()
+      if (params.options) cmd << params.options
+      return cmd
+    })
   }
 
   def "test pullrequest template bindings"() {
     setup:
       registerAllowedMethod('resolveTemplate', [Map], { Map params ->
-        assert params.parameters.command == 'mvn clean goal'
-        assert params.parameters.duration
-        assert params.parameters.hasTests == true
-        assert params.parameters.totalCount == 5
-        assert params.parameters.failCount == 2
-        assert params.parameters.skipCount == 1
-        assert params.parameters.absoluteUrl == 'jenkins.url/testReport'
-        assert params.parameters.failedTests
+        verifyAll {
+          params.parameters.command == 'mvn clean install -Daether.connector.resumeDownloads=false'
+          params.parameters.failed == false
+          params.parameters.status == PullRequestReport.emoji.SUCCESS
+          params.parameters.duration == "2m 30s"
+          params.parameters.hasErrors == false
+          params.parameters.hasWarnings == false
+          params.parameters.errors == []
+          params.parameters.warnings == []
+          params.parameters.hasTests == true
+          params.parameters.totalCount == 5
+          params.parameters.failCount == 2
+          params.parameters.skipCount == 1
+          params.parameters.testResultsUrl == 'jenkins.url/testReport'
+          params.parameters.failedTests == [[:]]
+        }
       })
       mockScript.binding.setVariable('currentBuild', GroovyMock(RunWrapper) {
         getAbsoluteUrl() >> 'jenkins.url/'
@@ -64,7 +81,6 @@ class TestPullRequestReport extends BasePipelineSpecification {
           return (1000 * 60 * 2) + (1000 * 30) // 2 minutes and 30 seconds
         }
       })
-      configRule.buildData.executionCommand = 'mvn clean goal'
       PullRequestReport report = new PullRequestReport(mockScript)
 
     when:
@@ -77,9 +93,11 @@ class TestPullRequestReport extends BasePipelineSpecification {
   def "test no tests run still comments a pr"() {
     setup:
       registerAllowedMethod('resolveTemplate', [Map], { Map params ->
-        assert params.parameters.command == 'mvn clean goal'
-        assert params.parameters.duration
-        assert params.parameters.hasTests == false
+        verifyAll {
+          params.parameters.command == 'mvn clean install -Daether.connector.resumeDownloads=false'
+          params.parameters.duration == "2m 30s"
+          params.parameters.hasTests == false
+        }
       })
       mockScript.binding.setVariable('currentBuild', GroovyMock(RunWrapper) {
         getAbsoluteUrl() >> 'jenkins.url/'
@@ -94,7 +112,6 @@ class TestPullRequestReport extends BasePipelineSpecification {
           return (1000 * 60 * 2) + (1000 * 30) // 2 minutes and 30 seconds
         }
       })
-      configRule.buildData.executionCommand = 'mvn clean goal'
       PullRequestReport report = new PullRequestReport(mockScript)
 
     when:

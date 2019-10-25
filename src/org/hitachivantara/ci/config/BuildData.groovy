@@ -101,11 +101,6 @@ class BuildData implements Serializable {
    */
   BuildStatus buildStatus = new BuildStatus()
 
-  /**
-   * Holds the current build run command
-   */
-  String executionCommand
-
   /*****************************************/
   /*** Build Properties shortcut getters ***/
   /*****************************************/

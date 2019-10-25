@@ -228,7 +228,7 @@ class SlackReport implements Report {
     }
     return title
   }
-\
+
   private Map buildStatusReleasesAttach(Map releasesStatusData) {
     int limit = 5
 

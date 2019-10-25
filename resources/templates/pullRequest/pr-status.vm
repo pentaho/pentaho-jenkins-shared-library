@@ -1,0 +1,30 @@
+#if($hasErrors)
+#[[###]]# Errors:
+<details><summary><b>Filtered log</b> (click to expand)</summary>
+<p>
+
+#foreach ($error in $errors )
+```
+${error}
+```
+#end ## end forEach
+
+</p>
+</details>
+#end ## end if hasErrors
+
+#if($hasWarnings)
+#[[###]]# Warnings:
+<details><summary><b>Filtered log</b> (click to expand)</summary>
+<p>
+
+#foreach ($warn in $warnings )
+```
+${warn}
+```
+
+#end ## end forEach
+
+</p>
+</details>
+#end ## end if $hasWarnings

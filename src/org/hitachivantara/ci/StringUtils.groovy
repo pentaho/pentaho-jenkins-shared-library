@@ -91,7 +91,7 @@ class StringUtils implements Serializable {
     fixNull(obj).trim().isEmpty()
   }
 
-  static String wordWrap(String text, int maxLineSize = 70) {
+  static String wordWrap(String text, int maxLineSize = 70, String lineBreak = ' \\\n') {
     def words = text.split()
     def lines = ['']
     words.each { word ->
@@ -104,6 +104,6 @@ class StringUtils implements Serializable {
         lines << word
       }
     }
-    return lines.join(' \\\n')
+    return lines.join(lineBreak)
   }
 }

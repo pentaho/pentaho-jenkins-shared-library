@@ -3,6 +3,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
+
 package org.hitachivantara.ci.build.impl
 
 import com.cloudbees.groovy.cps.NonCPS
@@ -60,12 +61,14 @@ class MavenBuilder implements IBuilder, Builder, Serializable {
   }
 
   @Override
-  Closure getExecution() {
+  String getExecutionCommand() {
     CommandBuilder command = getCommandBuilder(jobItem)
-    String mvnCommand = command.build()
+    return command.build()
+  }
 
-    buildData.executionCommand = mvnCommand
-
+  @Override
+  Closure getExecution() {
+    String mvnCommand = getExecutionCommand()
     steps.log.info "Maven directives for ${jobItem.jobID}: $mvnCommand"
     return getMvnDsl(jobItem, mvnCommand)
   }
@@ -105,7 +108,7 @@ class MavenBuilder implements IBuilder, Builder, Serializable {
     return getMvnDsl(jobItem, mvnCommand)
   }
 
-  MavenModule buildMavenModule(JobItem jobItem, CommandBuilder command = null) {
+  MavenModule buildMavenModule(JobItem jobItem, CommandBuilder command = null) throws Exception {
     command = command ?: getCommandBuilder(jobItem)
 
     Properties properties = command.getUserProperties()
@@ -113,12 +116,17 @@ class MavenBuilder implements IBuilder, Builder, Serializable {
     List<String> inactiveProfiles = command.getInactiveProfileIds()
     String file = Paths.get(jobItem.buildWorkDir, jobItem.buildFile ?: 'pom.xml').toString()
 
-    return steps.buildMavenModule(
-      file: file,
-      activeProfiles: activeProfiles,
-      inactiveProfiles: inactiveProfiles,
-      userProperties: properties
-    )
+    try {
+      return steps.buildMavenModule(
+        file: file,
+        activeProfiles: activeProfiles,
+        inactiveProfiles: inactiveProfiles,
+        userProperties: properties
+      )
+    } catch(Throwable e) {
+      buildData.error('Model Building', jobItem, e)
+      throw new BuilderException("Couldn't generate a Maven Module for this project.")
+    }
   }
 
   List<MavenProjectWrapper> getActiveModules(JobItem jobItem, boolean alsoMakeParent = true) {
@@ -270,13 +278,11 @@ class MavenBuilder implements IBuilder, Builder, Serializable {
 
   CommandBuilder getCommandBuilder(JobItem jobItem, String... args) {
     List<String> options = [buildData.getString(MAVEN_DEFAULT_COMMAND_OPTIONS)]
-
     if (jobItem.buildFile) options += "-f ${jobItem.buildFile}"
 
     // This is for using Takari Concurrent Local Repository which uses aether so to avoid the occasional .part file
     // 'resume' (see: https://github.com/takari/takari-local-repository/issues/4) issue we send this:
     options += '-Daether.connector.resumeDownloads=false'
-
     options.addAll(args)
 
     CommandBuilder command = steps.getMavenCommandBuilder(options: options.join(' '))
@@ -284,7 +290,7 @@ class MavenBuilder implements IBuilder, Builder, Serializable {
     return command
   }
 
-  Closure getMvnDsl(JobItem jobItem, String cmd) {
+  Closure getMvnDsl(JobItem jobItem, String cmd) throws Exception {
     String mavenSettingsFile = buildData.getString(MAVEN_SETTINGS)
     String globalMavenSettingsFile = mavenSettingsFile
     String mavenLocalRepoPath = "${buildData.getString(LIB_CACHE_ROOT_PATH)}/maven"

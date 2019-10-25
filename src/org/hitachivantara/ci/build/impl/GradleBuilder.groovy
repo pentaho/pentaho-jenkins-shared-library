@@ -34,23 +34,7 @@ class GradleBuilder implements IBuilder, Builder, Serializable {
   }
 
   @Override
-  Closure getExecution() {
-    throw new BuilderException('Not yet implemented')
-  }
-
-  @Override
-  void setBuilderData(Map builderData) {
-    this.buildData = builderData['buildData']
-    this.dsl = builderData['dsl']
-  }
-
-  @Override
-  Closure getBuildClosure(JobItem jobItem) {
-
-    if (buildData.noop || jobItem.execNoop) {
-      return { -> dsl.echo "${jobItem.getJobID()} NOOP so not building ${jobItem.getScmID()}" }
-    }
-
+  String getExecutionCommand() {
     Map buildProperties = buildData.getBuildProperties()
     String gradleLocalRepoPath = "${buildProperties[WORKSPACE] ?: ''}/caches/.gradle"
     String defaultGradleOpts = buildProperties[GRADLE_DEFAULT_COMMAND_OPTIONS]
@@ -79,9 +63,32 @@ class GradleBuilder implements IBuilder, Builder, Serializable {
       gradleCmd << testTargets
     }
 
+    return gradleCmd.toString()
+  }
+
+  @Override
+  Closure getExecution() {
+    throw new BuilderException('Not yet implemented')
+  }
+
+  @Override
+  void setBuilderData(Map builderData) {
+    this.buildData = builderData['buildData']
+    this.dsl = builderData['dsl']
+  }
+
+  @Override
+  Closure getBuildClosure(JobItem jobItem) {
+
+    if (buildData.noop || jobItem.execNoop) {
+      return { -> dsl.echo "${jobItem.getJobID()} NOOP so not building ${jobItem.getScmID()}" }
+    }
+
+    String gradleCmd = getExecutionCommand()
+
     dsl.echo "Gradle build directives for ${jobItem.getJobID()}: ${gradleCmd}"
 
-    return getGradleDsl(jobItem, gradleCmd.toString())
+    return getGradleDsl(jobItem, gradleCmd)
 
   }
 

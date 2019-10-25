@@ -3,6 +3,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
+
 package org.hitachivantara.ci.build.helper
 
 import com.cloudbees.groovy.cps.NonCPS
@@ -127,37 +128,6 @@ class BuilderUtils implements Serializable {
   }
 
   /**
-   * Find the closest build file to the given file
-   * @param base
-   * @param current
-   * @return
-   */
-  static File findBuildFile(File base, File current, String buildFilename) {
-    /*
-     * Search the for the closest build file to the given file
-     * Location: a/build.xml
-     * Iterations: a/b/c/version.xml -> a/b/c/ -> a/b/ -> a/
-     */
-
-    if (!current.exists() || base == current) {
-      // file doesn't belong to this tree, give up.
-      return null
-    }
-    if (current.directory) {
-      // Does the build file exist under current dir?
-      File file = new File(current, buildFilename)
-      if (file.exists()) {
-        return file
-      }
-    } else if (current.name == buildFilename) {
-      return current
-    }
-
-    // Keep searching up
-    findBuildFile(base, current.parentFile, buildFilename)
-  }
-
-  /**
    * Given a JobItem, it will update the remaining groups items to FORCE
    * @param jobItem
    * @param buildMap
@@ -184,20 +154,22 @@ class BuilderUtils implements Serializable {
   /**
    * execute the shell command, but handle the exit code for proper logging
    * @param String cmd
-   * @param Script dsl
+   * @param Script steps
    * @param boolean abort When true (default), throws an exception if script returns in error
    * @return the script's exit code
    * @throws Exception
    */
-  static int process(String cmd, Script dsl, boolean abort = true) throws Exception {
-    int exitCode = dsl.sh(returnStatus: true, script: cmd)
+  static int process(String cmd, Script steps, boolean abort = true) throws BuildException, PipelineSignalException {
+    int exitCode = steps.sh(returnStatus: true, script: cmd)
     if (exitCode != 0) {
       int errorSignal = getErrorSignal(exitCode)
       if (errorSignal > 0) {
         // Not good! Someone stopped this process manually.
         throw new PipelineSignalException(Result.ABORTED, "Job item was terminated by ${getSignalName(errorSignal)}")
       }
-      if (abort) throw new BuildException("script returned exit code $exitCode")
+      if (abort) {
+        throw new BuildException("script returned exit code $exitCode")
+      }
     }
     return exitCode
   }
@@ -205,14 +177,14 @@ class BuilderUtils implements Serializable {
   /**
    *
    * @param String cmd
-   * @param Script dsl
+   * @param Script steps
    * @param abort When true (default), throws an exception if script returns in error
    * @return the output of the script
    * @throws Exception
    */
-  static String processOutput(String cmd, Script dsl, boolean abort = true) throws Exception {
+  static String processOutput(String cmd, Script steps, boolean abort = true) throws AbortException, PipelineSignalException {
     try {
-      return dsl.sh(returnStdout: true, script: cmd)?.trim()
+      return steps.sh(returnStdout: true, script: cmd)?.trim()
     } catch (AbortException err) {
       int exitCode = getExitCode(err.message)
       int errorSignal = getErrorSignal(exitCode)
@@ -220,13 +192,16 @@ class BuilderUtils implements Serializable {
         // Not good! Someone stopped this process manually.
         throw new PipelineSignalException(Result.ABORTED, "Job item was terminated by ${getSignalName(errorSignal)}")
       }
-      if (abort) throw err
+      if (abort) {
+        throw err
+      }
     }
     return ""
   }
 
   @NonCPS
   static int getExitCode(String cause) {
+    // the shell step will throw an exception with 'script returned exit code #' message
     def matcher = (cause =~ /script returned exit code (\d+)/)
     def exitCode = 0
     if (matcher.matches() && matcher.hasGroup()) {
