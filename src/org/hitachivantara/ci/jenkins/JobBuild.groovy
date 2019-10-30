@@ -42,7 +42,7 @@ class JobBuild {
         parameters: parameters
       )
       if (jobRun && !async) {
-        if (jobRun.result == 'FAILURE') {
+        if (jobRun.resultIsWorseOrEqualTo('FAILURE')) {
           throw new JobException("Job '${jobName}' execution failed")
         } else {
           steps.job.setBuildResult(jobRun.result)
