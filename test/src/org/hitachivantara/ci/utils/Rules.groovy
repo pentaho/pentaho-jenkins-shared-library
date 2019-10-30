@@ -6,6 +6,7 @@ import org.hitachivantara.ci.FileUtils
 import org.hitachivantara.ci.build.helper.BuilderUtils
 import org.hitachivantara.ci.build.impl.AbstractBuilder
 import org.hitachivantara.ci.config.BuildDataBuilder
+import org.hitachivantara.ci.jenkins.JenkinsUtils
 import org.junit.rules.RuleChain
 
 class Rules {
@@ -19,6 +20,7 @@ class Rules {
       .outerRule(new JenkinsSetupRule(specification, libConfig))
       .around(new JenkinsVarRule(specification, 'log'))
       .around(new JenkinsVarRule(specification, 'utils'))
+      .around(new ReplacePropertyRule((JenkinsUtils): ['static.isPluginActive': { String pluginId, String version -> true }]))
       .around(new ReplacePropertyRule((FileUtils): ['static.getSteps': { -> specification.mockScript }]))
       .around(new ReplacePropertyRule((BuilderUtils): ['static.getSteps': { -> specification.mockScript }]))
       .around(new ReplacePropertyRule((BuildDataBuilder): ['getSteps': { -> specification.mockScript }]))
