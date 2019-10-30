@@ -18,7 +18,6 @@ import org.junit.Rule
 import org.junit.rules.RuleChain
 import spock.lang.Unroll
 
-import static org.hitachivantara.ci.config.LibraryProperties.MAVEN_DEFAULT_COMMAND_OPTIONS
 import static org.hitachivantara.ci.config.LibraryProperties.MAVEN_TEST_OPTS
 import static org.hitachivantara.ci.config.LibraryProperties.CHANGE_ID
 import static org.hitachivantara.ci.config.LibraryProperties.PR_STATUS_REPORTS
@@ -58,20 +57,20 @@ class TestMavenBuild extends BasePipelineSpecification {
     setup:
       JobItem jobItem = new JobItem(buildFramework: 'Maven', directives: 'clean install')
     when:
-      Builder builder = BuilderFactory.builderFor(mockScript, jobItem)
+      Builder builder = BuilderFactory.builderFor(jobItem)
       builder.getExecution().call()
     then:
-      shellRule.cmds[0] == 'mvn clean install -Daether.connector.resumeDownloads=false'
+      shellRule.cmds[0] == 'mvn clean install'
   }
 
   @Unroll
   def "build command for #jobData"() {
     setup:
-      configRule.buildProperties[MAVEN_DEFAULT_COMMAND_OPTIONS] = '-B -e'
+      configRule.buildProperties['MAVEN_DEFAULT_COMMAND_OPTIONS'] = '-B -e'
       JobItem jobItem = configRule.newJobItem(jobData)
 
     when:
-      IBuilder builder = BuilderFactory.builderFor(mockScript, jobItem)
+      IBuilder builder = BuilderFactory.builderFor(jobItem)
       builder.getBuildClosure(jobItem).call()
 
     then:
@@ -85,9 +84,9 @@ class TestMavenBuild extends BasePipelineSpecification {
       ]
 
       expected << [
-        'mvn clean install -B -e -Daether.connector.resumeDownloads=false -DskipTests',
-        'mvn package -B -e -Daether.connector.resumeDownloads=false -DskipTests',
-        'mvn install -B -e -f ./core/pom.xml -Daether.connector.resumeDownloads=false -DskipTests'
+        'mvn clean install -B -e -DskipTests',
+        'mvn package -B -e -DskipTests',
+        'mvn install -B -e -f ./core/pom.xml -DskipTests'
       ]
   }
 
@@ -98,7 +97,7 @@ class TestMavenBuild extends BasePipelineSpecification {
       JobItem jobItem = new JobItem(jobData)
 
     when:
-      IBuilder builder = BuilderFactory.builderFor(mockScript, jobItem)
+      IBuilder builder = BuilderFactory.builderFor(jobItem)
       builder.getTestClosure(jobItem).call()
 
     then:
@@ -106,8 +105,8 @@ class TestMavenBuild extends BasePipelineSpecification {
 
     where:
       jobData                                             || expected
-      ['buildFramework': 'Maven']                         || 'mvn test -Daether.connector.resumeDownloads=false -DsurefireArgLine=-Xmx1g'
-      ['buildFramework': 'Maven', 'buildFile': 'pom.xml'] || 'mvn test -f pom.xml -Daether.connector.resumeDownloads=false -DsurefireArgLine=-Xmx1g'
+      ['buildFramework': 'Maven']                         || 'mvn test -DsurefireArgLine=-Xmx1g'
+      ['buildFramework': 'Maven', 'buildFile': 'pom.xml'] || 'mvn test -f pom.xml -DsurefireArgLine=-Xmx1g'
   }
 
   @Unroll
@@ -118,7 +117,7 @@ class TestMavenBuild extends BasePipelineSpecification {
       JobItem jobItem = new JobItem(jobData)
 
     when:
-      IBuilder builder = BuilderFactory.builderFor(mockScript, jobItem)
+      IBuilder builder = BuilderFactory.builderFor(jobItem)
       builder.getTestClosure(jobItem).call()
 
     then:
@@ -135,10 +134,10 @@ class TestMavenBuild extends BasePipelineSpecification {
       ]
 
       expected << [
-        'mvn test -Daether.connector.resumeDownloads=false -DsurefireArgLine=-Xmx1g -Daudit -P core',
-        'mvn test -Daether.connector.resumeDownloads=false',
-        'mvn test -Daether.connector.resumeDownloads=false -Daudit',
-        'mvn test -Daether.connector.resumeDownloads=false -DsurefireArgLine=-Xmx1g'
+        'mvn test -DsurefireArgLine=-Xmx1g -Daudit -P core',
+        'mvn test',
+        'mvn test -Daudit',
+        'mvn test -DsurefireArgLine=-Xmx1g'
       ]
   }
 
@@ -160,21 +159,17 @@ class TestMavenBuild extends BasePipelineSpecification {
       mockScript.binding.setVariable('pullRequest', [head: '12345'])
 
     when:
-      Builder builder = BuilderFactory.builderFor(mockScript, jobItem)
+      Builder builder = BuilderFactory.builderFor(jobItem)
       builder.getSonarExecution().call()
 
     then:
       verifyAll {
         commandBuilder
         commandBuilder.goals == ['sonar:sonar']
-//        assert commandBuilder.getOptionsValues('pl').empty, "must not contain any project list"
         assert commandBuilder.getOptionsValues('am').empty, "must not contain any reactor make upstream (am)"
         assert commandBuilder.getOptionsValues('amd').empty, "must not contain any reactor make downstream (amd)"
 
         commandBuilder.getOptionsValues('pl') == [expectedPl]
-        commandBuilder.userProperties['sonar'] == 'true'
-//        commandBuilder.userProperties['sonar.inclusions'] == expectedInclusions
-//        commandBuilder.userProperties['sonar.exclusions'] == expectedExclusions
 
         if (PR) {
           commandBuilder.userProperties.containsKey('sonar.pullrequest.branch')

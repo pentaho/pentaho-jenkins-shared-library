@@ -52,7 +52,7 @@ class TestAntBuild extends BasePipelineSpecification {
       JobItem jobItem = new JobItem('', jobData, [:])
 
     when:
-      IBuilder builder = BuilderFactory.builderFor(mockScript, jobItem)
+      IBuilder builder = BuilderFactory.builderFor(jobItem)
       Closure antBuild = builder.getBuildClosure(jobItem)
       antBuild()
 
@@ -72,7 +72,7 @@ class TestAntBuild extends BasePipelineSpecification {
       JobItem jobItem = new JobItem('', jobData, [:])
 
     when:
-      IBuilder builder = BuilderFactory.builderFor(mockScript, jobItem)
+      IBuilder builder = BuilderFactory.builderFor(jobItem)
       Closure mvnTest = builder.getTestClosure(jobItem)
       mvnTest()
 
@@ -92,7 +92,7 @@ class TestAntBuild extends BasePipelineSpecification {
       jobData.directives = directives
       JobItem jobItem = new JobItem('', jobData, [:])
     when:
-      IBuilder builder = BuilderFactory.builderFor(mockScript, jobItem)
+      IBuilder builder = BuilderFactory.builderFor(jobItem)
       Closure mvnTest = builder.getTestClosure(jobItem)
       mvnTest()
 

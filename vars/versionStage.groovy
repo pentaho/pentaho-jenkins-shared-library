@@ -20,7 +20,6 @@ import static org.hitachivantara.ci.config.LibraryProperties.BUILD_CONFIG_ROOT_P
 import static org.hitachivantara.ci.config.LibraryProperties.BUILD_ID_TAIL
 import static org.hitachivantara.ci.config.LibraryProperties.BUILD_RETRIES
 import static org.hitachivantara.ci.config.LibraryProperties.BUILD_VERSIONS_FILE
-import static org.hitachivantara.ci.config.LibraryProperties.MAVEN_RESOLVE_REPO_URL
 import static org.hitachivantara.ci.config.LibraryProperties.RELEASE_MODE
 import static org.hitachivantara.ci.config.LibraryProperties.RELEASE_VERSION
 import static org.hitachivantara.ci.config.LibraryProperties.RUN_BUILDS
@@ -78,7 +77,7 @@ void doVersioning(BuildData buildData) {
 
   String vmJar = "${vmArtifactId}-${vmVersion}.jar"
   String vmJarPath = FileUtils.getPath(buildData.getString(WORKSPACE), vmJar)
-  String vmUrl = "${buildData.getString(MAVEN_RESOLVE_REPO_URL)}/${vmGroupId}/${vmArtifactId}/${vmVersion}/${vmJar}"
+  String vmUrl = "${buildData.getString('MAVEN_RESOLVE_REPO_URL')}/${vmGroupId}/${vmArtifactId}/${vmVersion}/${vmJar}"
 
   // download it if not already present locally
   if (!FileUtils.exists(vmJarPath)) {

@@ -9,13 +9,23 @@ import org.hitachivantara.ci.JobItem
 
 interface Builder {
 
-  String getExecutionCommand()
+  /**
+   * Builder name for property prefixes and general reference
+   * @return
+   */
+  String getName()
 
   /**
    * Returns a closure to execute the job item build
    * @return
    */
   Closure getExecution()
+
+  /**
+   * Returns the command executed for this item build
+   * @return
+   */
+  String getExecutionCommand()
 
   /**
    * Expand a jobItem to be built in parallel.

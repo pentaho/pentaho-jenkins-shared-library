@@ -62,7 +62,7 @@ void runStage(BuildData buildData) {
   int totalChunks = jobItemPartitions.size()
   boolean singleChunk = totalChunks <= 1
 
-  String tagName = evaluateTagName(buildData.getString(TAG_NAME))
+  String tagName = utils.evaluateTagName(buildData.getString(TAG_NAME))
   String tagMessage = buildData.getString(TAG_MESSAGE)
 
   jobItemPartitions.eachWithIndex { List<JobItem> jobItemsChunk, int currentChunk ->
@@ -115,43 +115,12 @@ void runStage(BuildData buildData) {
  * @return
  */
 Closure getItemExecution(JobItem jobItem, String tagName, String tagMessage) {
-  Map scmInfo = jobItem.scmInfo + [credentials: jobItem.scmCredentials]
-
   return { ->
-    dir(jobItem.buildWorkDir) {
-      utils.withGit(scmInfo) { String gitUrl ->
-        sh("git tag -a ${tagName} -m '${tagMessage}' --force")
-        sh("git push ${gitUrl} ${tagName} --force")
-      }
-    }
+    utils.tagItem(jobItem, tagName, tagMessage)
     if ( jobItem.isCreateRelease() ) {// if is to create GH release
       dir(jobItem.checkoutDir) {
         GitHubManager.createRelease(jobItem)
       }
     }
-  }
-}
-
-/**
- * Evaluate a given tag name to provide dynamic tag naming expressions
- *
- * Currently supported expressions:
- * - date|<format expression> : date|yyyyMMdd-${BUILD_NUMBER}
- *
- * @param tagName
- * @return
- */
-String evaluateTagName(String tagName) {
-  List parts = tagName.tokenize('|')
-
-  if (parts.size() < 2) {
-    return tagName
-  }
-
-  switch (parts[0]) {
-    case 'date':
-      return BuildData.instance.clock.format(parts[1])
-    default:
-      return tagName
   }
 }

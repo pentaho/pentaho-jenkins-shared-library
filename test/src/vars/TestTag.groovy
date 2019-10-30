@@ -18,7 +18,7 @@ import java.time.ZoneOffset
 class TestTag extends BasePipelineSpecification {
 
   @Rule
-  JenkinsVarRule tagRule = new JenkinsVarRule(this, 'tag')
+  JenkinsVarRule tagRule = new JenkinsVarRule(this, 'utils')
 
   def "test tag name expression evaluation"() {
     setup:

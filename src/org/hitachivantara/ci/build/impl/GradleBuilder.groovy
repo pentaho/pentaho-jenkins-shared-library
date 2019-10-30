@@ -3,14 +3,14 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
+
 package org.hitachivantara.ci.build.impl
 
 import org.hitachivantara.ci.JobItem
-import org.hitachivantara.ci.build.Builder
+import org.hitachivantara.ci.build.BuildFramework
 import org.hitachivantara.ci.build.BuilderException
 import org.hitachivantara.ci.build.IBuilder
 import org.hitachivantara.ci.build.helper.BuilderUtils
-import org.hitachivantara.ci.config.BuildData
 
 import static org.hitachivantara.ci.config.LibraryProperties.GRADLE_DEFAULT_COMMAND_OPTIONS
 import static org.hitachivantara.ci.config.LibraryProperties.GRADLE_DEFAULT_DIRECTIVES
@@ -19,18 +19,15 @@ import static org.hitachivantara.ci.config.LibraryProperties.JENKINS_GRADLE_FOR_
 import static org.hitachivantara.ci.config.LibraryProperties.JENKINS_JDK_FOR_BUILDS
 import static org.hitachivantara.ci.config.LibraryProperties.WORKSPACE
 
-class GradleBuilder implements IBuilder, Builder, Serializable {
+class GradleBuilder extends AbstractBuilder implements IBuilder, Serializable {
 
-  private BuildData buildData
-  private JobItem jobItem
-  private Script dsl
+  String name = BuildFramework.GRADLE.name()
 
   private final static String BASE_COMMAND = "gradle"
 
-  GradleBuilder(Script dsl, BuildData buildData, JobItem jobItem) {
-    this.dsl = dsl
-    this.jobItem = jobItem
-    this.buildData = buildData
+  GradleBuilder(String id, JobItem item) {
+    this.item = item
+    this.id = id
   }
 
   @Override
@@ -45,15 +42,15 @@ class GradleBuilder implements IBuilder, Builder, Serializable {
       gradleCmd << " ${buildProperties[GRADLE_DEFAULT_COMMAND_OPTIONS]}"
     }
 
-    if (jobItem.buildFile) {
-      gradleCmd << " -b ${jobItem.buildFile}"
+    if (item.buildFile) {
+      gradleCmd << " -b ${item.buildFile}"
     }
 
-    if (jobItem.settingsFile) {
-      gradleCmd << " -c ${jobItem.settingsFile}"
+    if (item.settingsFile) {
+      gradleCmd << " -c ${item.settingsFile}"
     }
 
-    BuilderUtils.applyBuildDirectives(gradleCmd, buildProperties[GRADLE_DEFAULT_DIRECTIVES] as String, jobItem.directives)
+    BuilderUtils.applyBuildDirectives(gradleCmd, buildProperties[GRADLE_DEFAULT_DIRECTIVES] as String, item.directives)
     String testTargets = buildData.buildProperties[GRADLE_TEST_TARGETS] ?: ''
 
     gradleCmd << " --gradle-user-home=${gradleLocalRepoPath}"
@@ -63,6 +60,7 @@ class GradleBuilder implements IBuilder, Builder, Serializable {
       gradleCmd << testTargets
     }
 
+    steps.echo "Gradle build directives for ${item.getJobID()}: ${gradleCmd}"
     return gradleCmd.toString()
   }
 
@@ -74,19 +72,19 @@ class GradleBuilder implements IBuilder, Builder, Serializable {
   @Override
   void setBuilderData(Map builderData) {
     this.buildData = builderData['buildData']
-    this.dsl = builderData['dsl']
+    this.steps = builderData['dsl']
   }
 
   @Override
   Closure getBuildClosure(JobItem jobItem) {
 
     if (buildData.noop || jobItem.execNoop) {
-      return { -> dsl.echo "${jobItem.getJobID()} NOOP so not building ${jobItem.getScmID()}" }
+      return { -> steps.echo "${jobItem.getJobID()} NOOP so not building ${jobItem.getScmID()}" }
     }
 
     String gradleCmd = getExecutionCommand()
 
-    dsl.echo "Gradle build directives for ${jobItem.getJobID()}: ${gradleCmd}"
+    steps.echo "Gradle build directives for ${jobItem.getJobID()}: ${gradleCmd}"
 
     return getGradleDsl(jobItem, gradleCmd)
 
@@ -96,7 +94,7 @@ class GradleBuilder implements IBuilder, Builder, Serializable {
   Closure getTestClosure(JobItem jobItem) {
 
     if (buildData.noop || jobItem.execNoop || !jobItem.testable) {
-      return { -> dsl.echo "${jobItem.jobID}: skipped testing ${jobItem.scmID}" }
+      return { -> this.steps.echo "${jobItem.jobID}: skipped testing ${jobItem.scmID}" }
     }
 
     String testTargets = buildData.buildProperties[GRADLE_TEST_TARGETS] ?: ''
@@ -126,7 +124,7 @@ class GradleBuilder implements IBuilder, Builder, Serializable {
       return getGradleDsl(jobItem, gradleCmd.toString())
 
     } else {
-      return { -> dsl.echo "${jobItem.jobID}: no test targets defined" }
+      return { -> this.steps.echo "${jobItem.jobID}: no test targets defined" }
 
     }
   }
@@ -138,8 +136,8 @@ class GradleBuilder implements IBuilder, Builder, Serializable {
 
   @Override
   List<List<JobItem>> expandItem() {
-    dsl.log.warn "Expanding jobItem not implemented for Gradle, reverting to normal"
-    [[jobItem]]
+    steps.log.warn "Expanding jobItem not implemented for Gradle, reverting to normal"
+    [[item]]
   }
 
   @Override
@@ -162,10 +160,10 @@ class GradleBuilder implements IBuilder, Builder, Serializable {
     Map buildProperties = buildData.getBuildProperties()
 
     return { ->
-      dsl.dir(jobItem.buildWorkDir) {
-        dsl.withEnv(["PATH+GRADLE=${dsl.tool "${buildProperties[JENKINS_GRADLE_FOR_BUILDS]}"}/bin",
-                     "JAVA_HOME=${dsl.tool "${buildProperties[JENKINS_JDK_FOR_BUILDS]}"}"]) {
-          BuilderUtils.process(gradleCmd, dsl)
+      this.steps.dir(jobItem.buildWorkDir) {
+        this.steps.withEnv(["PATH+GRADLE=${this.steps.tool "${buildProperties[JENKINS_GRADLE_FOR_BUILDS]}"}/bin",
+                            "JAVA_HOME=${this.steps.tool "${buildProperties[JENKINS_JDK_FOR_BUILDS]}"}"]) {
+          BuilderUtils.process(gradleCmd, this.steps)
         }
       }
     }

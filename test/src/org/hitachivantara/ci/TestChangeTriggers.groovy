@@ -52,7 +52,7 @@ class TestChangeTriggers extends BasePipelineSpecification {
 
     when: "first job gets executed"
       JobItem firstJob = buildMap['20'].first()
-      Builder firstJobBuilder = BuilderFactory.builderFor(mockScript, firstJob)
+      Builder firstJobBuilder = BuilderFactory.builderFor(firstJob)
       firstJobBuilder.applyScmChanges()
 
     then: "the remaining other group jobs are set to FORCE"

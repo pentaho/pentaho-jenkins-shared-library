@@ -39,8 +39,16 @@ import static org.hitachivantara.ci.config.LibraryProperties.TAG_SKIP_SNAPSHOT
 import static org.hitachivantara.ci.config.LibraryProperties.USE_MINION_JOBS
 import static org.hitachivantara.ci.config.LibraryProperties.USE_MINION_MULTIBRANCH_JOBS
 
-@Singleton
 class BuildData implements Serializable {
+
+  private final static BuildData instance = new BuildData()
+
+  private BuildData() {}
+
+  @NonCPS
+  static BuildData getInstance() {
+    instance
+  }
 
   /**
    * Clock implementation to get date/time from
@@ -114,23 +122,23 @@ class BuildData implements Serializable {
   }
 
   Integer getInt(String property) {
-    (buildProperties as FilteredMapWithDefault).getInt(property)
+    (buildProperties as ConfigurationMap).getInt(property)
   }
 
   Double getDouble(String property) {
-    (buildProperties as FilteredMapWithDefault).getDouble(property)
+    (buildProperties as ConfigurationMap).getDouble(property)
   }
 
   Boolean getBool(String property) {
-    (buildProperties as FilteredMapWithDefault).getBool(property)
+    (buildProperties as ConfigurationMap).getBool(property)
   }
 
   String getString(String property) {
-    (buildProperties as FilteredMapWithDefault).getString(property)
+    (buildProperties as ConfigurationMap).getString(property)
   }
 
   List getList(String property) {
-    (buildProperties as FilteredMapWithDefault).getList(property)
+    (buildProperties as ConfigurationMap).getList(property)
   }
 
   /******************************************/

@@ -14,7 +14,22 @@ The build file path relative to the root directory defined on `root`
 **Default:** defaults to the build framework default
 
 ### directives
-Build directives
+Build directives. These can be defined as a Map to allow running the item through multiple Builders.
+
+Simple directives:
+```
+directives: clean install
+```
+
+Multiple directives:
+```
+directives:
+  build : clean package
+  test  : test
+  it    : integration-test
+```
+
+Each of the directives keys will have to be passed to the Builder so that it can identify the correct ones to use.
 
 **Default:** \<empty\> 
 

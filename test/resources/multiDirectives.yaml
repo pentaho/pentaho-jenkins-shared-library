@@ -1,0 +1,19 @@
+buildProperties:
+  BUILD_PLAN_ID: Amazing build plan
+
+  TEST_FLAGS: -DrunITs
+
+jobGroups:
+  20:
+    - jobID             : legacy
+      directives        : install
+      prDirectives      : verify
+
+    - jobID             : new format
+      directives        :
+        build           : install -DskipTests
+        test            : integration-test ${TEST_FLAGS}
+      prDirectives      :
+        build           : verify
+        audit           : sonar:sonar
+        test            : test ${TEST_FLAGS}

@@ -52,7 +52,7 @@ class TestPullRequestReport extends BasePipelineSpecification {
     setup:
       registerAllowedMethod('resolveTemplate', [Map], { Map params ->
         verifyAll {
-          params.parameters.command == 'mvn clean install -Daether.connector.resumeDownloads=false'
+          params.parameters.command == 'mvn clean install'
           params.parameters.failed == false
           params.parameters.status == PullRequestReport.emoji.SUCCESS
           params.parameters.duration == "2m 30s"
@@ -94,7 +94,7 @@ class TestPullRequestReport extends BasePipelineSpecification {
     setup:
       registerAllowedMethod('resolveTemplate', [Map], { Map params ->
         verifyAll {
-          params.parameters.command == 'mvn clean install -Daether.connector.resumeDownloads=false'
+          params.parameters.command == 'mvn clean install'
           params.parameters.duration == "2m 30s"
           params.parameters.hasTests == false
         }

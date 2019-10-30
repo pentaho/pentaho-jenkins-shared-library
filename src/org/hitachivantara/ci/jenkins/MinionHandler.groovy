@@ -10,7 +10,7 @@ import hudson.model.ItemGroup
 import org.hitachivantara.ci.JobItem
 import org.hitachivantara.ci.config.BuildData
 import org.hitachivantara.ci.config.ConfigurationException
-import org.hitachivantara.ci.config.FilteredMapWithDefault
+import org.hitachivantara.ci.config.ConfigurationMap
 import org.jenkinsci.plugins.workflow.cps.CpsScript
 
 import java.nio.file.Paths
@@ -35,11 +35,12 @@ import static org.hitachivantara.ci.config.LibraryProperties.MINION_BUILD_DATA_R
 import static org.hitachivantara.ci.config.LibraryProperties.MINION_LOGS_TO_KEEP
 import static org.hitachivantara.ci.config.LibraryProperties.MINION_PIPELINE_TEMPLATE
 import static org.hitachivantara.ci.config.LibraryProperties.MINION_POLL_CRON_INTERVAL
+import static org.hitachivantara.ci.config.LibraryProperties.OVERRIDE_JOB_PARAMS
+import static org.hitachivantara.ci.config.LibraryProperties.OVERRIDE_PARAMS
 import static org.hitachivantara.ci.config.LibraryProperties.POLL_CRON_INTERVAL
 import static org.hitachivantara.ci.config.LibraryProperties.PR_SLACK_CHANNEL
 import static org.hitachivantara.ci.config.LibraryProperties.PR_STATUS_REPORTS
 import static org.hitachivantara.ci.config.LibraryProperties.RELEASE_BUILD_NUMBER
-import static org.hitachivantara.ci.config.LibraryProperties.RUN_AUDIT
 import static org.hitachivantara.ci.config.LibraryProperties.RUN_BUILDS
 import static org.hitachivantara.ci.config.LibraryProperties.RUN_CHECKOUTS
 import static org.hitachivantara.ci.config.LibraryProperties.RUN_UNIT_TESTS
@@ -97,25 +98,22 @@ class MinionHandler {
       // add all the current build libraries
       List libraries = JobUtils.getLoadedLibraries(steps.currentBuild)
 
-      workJobItems.each { JobItem ji ->
-        steps.log.debug "Creating minion job for ${ji.jobID}"
+      workJobItems.each { JobItem item ->
+        steps.log.debug "Creating minion job for ${item.jobID}"
 
         String script = steps.resolveTemplate(templateSource + [
           parameters: [
             libraries : libraries,
-            properties: new FilteredMapWithDefault(buildData.buildProperties, [
+            properties: new ConfigurationMap(buildData.buildProperties, [
               (BUILD_DATA_ROOT_PATH): getBuildDataPath(),
-              (BUILD_DATA_FILE)     : getBuildDataFilename(ji),
-              (RUN_CHECKOUTS)       : buildData.getBool(RUN_CHECKOUTS) && ji.checkout,
-              (RUN_UNIT_TESTS)      : buildData.getBool(RUN_UNIT_TESTS) && ji.testable,
-              (RUN_AUDIT)           : buildData.getBool(RUN_AUDIT) && ji.auditable,
-              (ARCHIVE_ARTIFACTS)   : buildData.getBool(ARCHIVE_ARTIFACTS) && ji.archivable
-            ])
+              (BUILD_DATA_FILE)     : getBuildDataFilename(item),
+            ]),
+            item: item.export()
           ]
         ])
 
         Map jobConfig = [
-          name: getJobName(ji),
+          name: getJobName(item),
           folder: rootFolderPath,
           script: script
         ]
@@ -124,16 +122,16 @@ class MinionHandler {
           jobConfig << [
             multibranch: true,
             scmConfig: [
-              organization  : ji.scmOrganization,
-              repository    : ji.scmRepository,
-              credentials   : ji.scmCredentials,
-              branches      : ji.scmBranch,
-              markerFile    : Paths.get(ji.root ?: '', ji.buildFile ?: ji.buildFramework.buildFile) as String,
-              scanInterval  : ji.scmScanInterval,
-              prStatusLabel : ji.prStatusLabel,
-              prReportStatus: ji.prReportStatus,
-              prScan        : ji.prScan,
-              prMerge       : ji.prMerge
+              organization  : item.scmOrganization,
+              repository    : item.scmRepository,
+              credentials   : item.scmCredentials,
+              branches      : item.scmBranch,
+              markerFile    : Paths.get(item.root ?: '', item.buildFile ?: item.buildFramework.buildFile) as String,
+              scanInterval  : item.scmScanInterval,
+              prStatusLabel : item.prStatusLabel,
+              prReportStatus: item.prReportStatus,
+              prScan        : item.prScan,
+              prMerge       : item.prMerge
             ]
           ]
         } 
@@ -225,16 +223,19 @@ class MinionHandler {
   }
 
   /**
-   * Generate yaml data a minion
+   * Generate yaml data for a minion
    * @param jobItem
    * @return
    */
   static Map getYamlData(JobItem jobItem) {
     BuildData buildData = BuildData.instance
 
-    Map buildProperties = [:]
+    Map buildProperties = new ConfigurationMap()
     buildProperties << buildData.pipelineProperties
-    buildProperties << buildData.pipelineParams
+    buildProperties << buildData.pipelineParams.findAll { String k, v ->
+      !(k in [OVERRIDE_PARAMS, OVERRIDE_JOB_PARAMS])
+    }
+
     buildProperties.put(BUILD_PLAN_ID, jobItem.jobID)
     buildProperties.put(USE_MINION_JOBS, false)
     buildProperties.put(USE_MINION_MULTIBRANCH_JOBS, false)

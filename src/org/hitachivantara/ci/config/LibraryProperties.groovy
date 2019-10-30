@@ -10,6 +10,18 @@ class LibraryProperties implements Serializable {
   //**********************
   //** Build Properties **
   //**********************
+  public static final String PRIVATE_RELEASE_REPO_URL = 'PRIVATE_RELEASE_REPO_URL'
+  public static final String PRIVATE_SNAPSHOT_REPO_URL = 'PRIVATE_SNAPSHOT_REPO_URL'
+  public static final String PUBLIC_RELEASE_REPO_URL = 'PUBLIC_RELEASE_REPO_URL'
+  public static final String PUBLIC_SNAPSHOT_REPO_URL = 'PUBLIC_SNAPSHOT_REPO_URL'
+  public static final String RESOLVE_REPO_URL = 'RESOLVE_REPO_URL'
+  public static final String OPTS = 'OPTS'
+  public static final String SETTINGS = 'SETTINGS'
+  public static final String DEFAULT_DIRECTIVES = 'DEFAULT_DIRECTIVES'
+  public static final String DEFAULT_COMMAND_OPTIONS = 'DEFAULT_COMMAND_OPTIONS'
+
+
+  // TODO refactor to remove fixed builder properties for generic ones
   public static final String ANT_DEFAULT_COMMAND_OPTIONS = 'ANT_DEFAULT_COMMAND_OPTIONS'
   public static final String ANT_DEFAULT_DIRECTIVES = 'ANT_DEFAULT_DIRECTIVES'
   public static final String ANT_TEST_TARGETS = 'ANT_TEST_TARGETS'
@@ -18,8 +30,6 @@ class LibraryProperties implements Serializable {
   public static final String GRADLE_DEFAULT_DIRECTIVES = 'GRADLE_DEFAULT_DIRECTIVES'
   public static final String GRADLE_TEST_TARGETS = 'GRADLE_TEST_TARGETS'
 
-  public static final String MAVEN_DEFAULT_COMMAND_OPTIONS = 'MAVEN_DEFAULT_COMMAND_OPTIONS'
-  public static final String MAVEN_DEFAULT_DIRECTIVES = 'MAVEN_DEFAULT_DIRECTIVES'
   public static final String MAVEN_TEST_OPTS = 'MAVEN_TEST_OPTS'
 
   public static final String JENKINS_JDK_FOR_BUILDS = 'JENKINS_JDK_FOR_BUILDS'
@@ -27,17 +37,6 @@ class LibraryProperties implements Serializable {
   public static final String JENKINS_GRADLE_FOR_BUILDS = 'JENKINS_GRADLE_FOR_BUILDS'
   public static final String JENKINS_MAVEN_FOR_BUILDS = 'JENKINS_MAVEN_FOR_BUILDS'
 
-
-  //************************************
-  //** Maven Configuration Properties **
-  //************************************
-  public static final String MAVEN_PRIVATE_RELEASE_REPO_URL = 'MAVEN_PRIVATE_RELEASE_REPO_URL'
-  public static final String MAVEN_PRIVATE_SNAPSHOT_REPO_URL = 'MAVEN_PRIVATE_SNAPSHOT_REPO_URL'
-  public static final String MAVEN_PUBLIC_RELEASE_REPO_URL = 'MAVEN_PUBLIC_RELEASE_REPO_URL'
-  public static final String MAVEN_PUBLIC_SNAPSHOT_REPO_URL = 'MAVEN_PUBLIC_SNAPSHOT_REPO_URL'
-  public static final String MAVEN_RESOLVE_REPO_URL = 'MAVEN_RESOLVE_REPO_URL'
-  public static final String MAVEN_OPTS = 'MAVEN_OPTS'
-  public static final String MAVEN_SETTINGS = 'MAVEN_SETTINGS'
 
 
   //***************
@@ -74,6 +73,8 @@ class LibraryProperties implements Serializable {
   public static final String BUILD_ORDER_REPORT = 'BUILD_ORDER_REPORT'
 
   public static final String NOOP = 'NOOP'
+
+  // TODO deprecate the stage ones
   public static final String RUN_BUILDS = 'RUN_BUILDS'
   public static final String RUN_CHECKOUTS = 'RUN_CHECKOUTS'
   public static final String RUN_VERSIONING = 'RUN_VERSIONING'
@@ -84,6 +85,7 @@ class LibraryProperties implements Serializable {
   public static final String RUN_SONARQUBE = 'RUN_SONARQUBE'
 
   public static final String PUSH_CHANGES = 'PUSH_CHANGES'
+  public static final String PARALLEL_SIZE = 'PARALLEL_SIZE'
   public static final String PARALLEL_CHUNKSIZE = 'PARALLEL_CHUNKSIZE'
   public static final String PARALLEL_CHECKOUT_CHUNKSIZE = 'PARALLEL_CHECKOUT_CHUNKSIZE'
   public static final String PARALLEL_PUSH_CHUNKSIZE = 'PARALLEL_PUSH_CHUNKSIZE'

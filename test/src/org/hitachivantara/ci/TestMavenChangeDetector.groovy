@@ -63,7 +63,7 @@ class TestMavenChangeDetector extends BasePipelineSpecification {
   def "no previous build yields commands"() {
     setup:
       JobItem jobItem = new JobItem(buildFramework: 'Maven', execType: 'auto', directives: 'clean install' )
-      MavenBuilder builder = BuilderFactory.builderFor(mockScript, jobItem) as MavenBuilder
+      MavenBuilder builder = BuilderFactory.builderFor(jobItem) as MavenBuilder
 
     when: "there are no successful builds"
       def wrapper = GroovyMock(RunWrapper) {
@@ -114,7 +114,7 @@ class TestMavenChangeDetector extends BasePipelineSpecification {
         [buildFramework: 'Maven', execType: 'auto'] + overrides,
         [BUILDS_ROOT_PATH: 'test/resources/multi-module-profiled-project']
       )
-      MavenBuilder builder = BuilderFactory.builderFor(mockScript, jobItem) as MavenBuilder
+      MavenBuilder builder = BuilderFactory.builderFor(jobItem) as MavenBuilder
 
     when: "there are changes present"
       jobItem.changeLog = changes
@@ -125,7 +125,7 @@ class TestMavenChangeDetector extends BasePipelineSpecification {
       mvnBuild()
 
     then: "the scripts yielded commands"
-      (shellRule.cmds[0] - ' -Daether.connector.resumeDownloads=false -DskipTests') == expectedCommand
+      (shellRule.cmds[0] - ' -DskipTests') == expectedCommand
       workdir == expectedWorkdir
 
     where:
@@ -219,7 +219,7 @@ class TestMavenChangeDetector extends BasePipelineSpecification {
       configRule.addProperty('BUILDS_ROOT_PATH', 'test/resources/multi-module-profiled-project')
       JobItem jobItem = configRule.newJobItem(['buildFramework': 'Maven', 'execType': 'auto'] + overrides)
       jobItem.changeLog = changes
-      MavenBuilder builder = BuilderFactory.builderFor(mockScript, jobItem) as MavenBuilder
+      MavenBuilder builder = BuilderFactory.builderFor(jobItem) as MavenBuilder
 
     when: "there are changes present"
       jobItem.changeLog = changes
@@ -230,7 +230,7 @@ class TestMavenChangeDetector extends BasePipelineSpecification {
       mvnBuild()
 
     then: "the scripts yielded commands"
-      (shellRule.cmds[0] - ' -Daether.connector.resumeDownloads=false') == expectedCommand
+      shellRule.cmds[0] == expectedCommand
       workdir == expectedWorkdir
 
     where:
@@ -278,7 +278,7 @@ class TestMavenChangeDetector extends BasePipelineSpecification {
       JobItem jobItem = configRule.newJobItem(['buildFramework': 'Maven', 'execType': 'auto'])
       ScmUtils.setCheckoutMetadata(jobItem, [GIT_URL: 'test', GIT_BRANCH: 'origin/master'])
 
-      MavenBuilder builder = BuilderFactory.builderFor(mockScript, jobItem) as MavenBuilder
+      MavenBuilder builder = BuilderFactory.builderFor(jobItem) as MavenBuilder
       configRule.addProperty(LibraryProperties.CHANGES_FROM_LAST, 'SUCCESS')
       jobItem.changeLog = ScmUtils.calculateChanges(mockScript, jobItem)
 
@@ -300,12 +300,12 @@ class TestMavenChangeDetector extends BasePipelineSpecification {
       [[], Result.SUCCESS]                | [[], Result.SUCCESS]                                 | [['sub-2/sub-1/pom.xml'], null]
 
       expected << [
-        'mvn clean install -Daether.connector.resumeDownloads=false -DskipTests -pl sub-3',
-        'mvn clean install -Daether.connector.resumeDownloads=false -DskipTests -pl sub-1,sub-3',
-        'mvn clean install -Daether.connector.resumeDownloads=false -DskipTests',
-        'mvn clean install -Daether.connector.resumeDownloads=false -DskipTests -pl sub-1,sub-3/sub-1',
-        'mvn clean install -Daether.connector.resumeDownloads=false -DskipTests -pl sub-2',
-        'mvn clean install -Daether.connector.resumeDownloads=false -DskipTests -pl sub-2/sub-1',
+        'mvn clean install -DskipTests -pl sub-3',
+        'mvn clean install -DskipTests -pl sub-1,sub-3',
+        'mvn clean install -DskipTests',
+        'mvn clean install -DskipTests -pl sub-1,sub-3/sub-1',
+        'mvn clean install -DskipTests -pl sub-2',
+        'mvn clean install -DskipTests -pl sub-2/sub-1',
       ]
   }
 

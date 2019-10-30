@@ -81,7 +81,7 @@ class TestMavenParallelFlag extends BasePipelineSpecification {
       configRule.addProperty('BUILDS_ROOT_PATH', 'test/resources/multi-module-profiled-project')
       JobItem jobItem = configRule.newJobItem(['buildFramework': 'Maven', 'parallelize': 'true'] + overrides)
 
-      MavenBuilder builder = BuilderFactory.builderFor(mockScript, jobItem) as MavenBuilder
+      MavenBuilder builder = BuilderFactory.builderFor(jobItem) as MavenBuilder
     when:
       List items = builder.expandWorkItem(jobItem)
     then:
@@ -103,59 +103,59 @@ class TestMavenParallelFlag extends BasePipelineSpecification {
 
       expected << [
           // override 1
-          [[[cmds   : 'mvn clean install -Daether.connector.resumeDownloads=false -DskipTests -N',
+          [[[cmds   : 'mvn clean install -DskipTests -N',
              workdir: 'test/resources/multi-module-profiled-project']
            ],
-           [[cmds   : 'mvn clean install -Daether.connector.resumeDownloads=false -DskipTests -pl sub-1',
+           [[cmds   : 'mvn clean install -DskipTests -pl sub-1',
              workdir: 'test/resources/multi-module-profiled-project'],
-            [cmds   : 'mvn clean install -Daether.connector.resumeDownloads=false -DskipTests -pl sub-2,sub-2/sub-1,sub-2/subsub-2',
+            [cmds   : 'mvn clean install -DskipTests -pl sub-2,sub-2/sub-1,sub-2/subsub-2',
              workdir: 'test/resources/multi-module-profiled-project'],
-            [cmds   : 'mvn clean install -Daether.connector.resumeDownloads=false -DskipTests -pl sub-3,sub-3/sub-1',
+            [cmds   : 'mvn clean install -DskipTests -pl sub-3,sub-3/sub-1',
              workdir: 'test/resources/multi-module-profiled-project']
            ]],
 
           // override 2
-          [[[cmds   : 'mvn clean install -Daether.connector.resumeDownloads=false -DskipTests -DskipDefault -P profile-A -N',
+          [[[cmds   : 'mvn clean install -DskipTests -DskipDefault -P profile-A -N',
              workdir: 'test/resources/multi-module-profiled-project'],
            ],
-           [[cmds   : 'mvn clean install -Daether.connector.resumeDownloads=false -DskipTests -DskipDefault -P profile-A -pl sub-1',
+           [[cmds   : 'mvn clean install -DskipTests -DskipDefault -P profile-A -pl sub-1',
              workdir: 'test/resources/multi-module-profiled-project'],
-            [cmds   : 'mvn clean install -Daether.connector.resumeDownloads=false -DskipTests -DskipDefault -P profile-A -pl sub-2,sub-2/sub-1,sub-2/subsub-2',
+            [cmds   : 'mvn clean install -DskipTests -DskipDefault -P profile-A -pl sub-2,sub-2/sub-1,sub-2/subsub-2',
              workdir: 'test/resources/multi-module-profiled-project']
            ]],
 
           // override 3
-          [[[cmds   : 'mvn clean install -Daether.connector.resumeDownloads=false -DskipTests -N',
+          [[[cmds   : 'mvn clean install -DskipTests -N',
              workdir: 'test/resources/multi-module-profiled-project'],
            ],
-           [[cmds   : 'mvn clean install -Daether.connector.resumeDownloads=false -DskipTests -pl sub-1',
+           [[cmds   : 'mvn clean install -DskipTests -pl sub-1',
              workdir: 'test/resources/multi-module-profiled-project'],
-            [cmds   : 'mvn clean install -Daether.connector.resumeDownloads=false -DskipTests -pl sub-3',
+            [cmds   : 'mvn clean install -DskipTests -pl sub-3',
              workdir: 'test/resources/multi-module-profiled-project']
            ]],
 
           // override 4
-          [[[cmds   : 'mvn install -f sub-1/pom.xml -Daether.connector.resumeDownloads=false -DskipTests',
+          [[[cmds   : 'mvn install -f sub-1/pom.xml -DskipTests',
              workdir: 'test/resources/multi-module-profiled-project']
            ]],
 
           // override 5
-          [[[cmds   : 'mvn install -Daether.connector.resumeDownloads=false -DskipTests -N',
+          [[[cmds   : 'mvn install -DskipTests -N',
              workdir: 'test/resources/multi-module-profiled-project/sub-2'],
            ],
-           [[cmds   : 'mvn install -Daether.connector.resumeDownloads=false -DskipTests -pl sub-1',
+           [[cmds   : 'mvn install -DskipTests -pl sub-1',
              workdir: 'test/resources/multi-module-profiled-project/sub-2'],
-            [cmds   : 'mvn install -Daether.connector.resumeDownloads=false -DskipTests -pl subsub-2',
+            [cmds   : 'mvn install -DskipTests -pl subsub-2',
              workdir: 'test/resources/multi-module-profiled-project/sub-2']
            ]],
 
           // override 6
-          [[[cmds   : 'mvn install -f sub-2/pom.xml -Daether.connector.resumeDownloads=false -DskipTests -N',
+          [[[cmds   : 'mvn install -f sub-2/pom.xml -DskipTests -N',
              workdir: 'test/resources/multi-module-profiled-project'],
            ],
-           [[cmds   : 'mvn install -f sub-2/pom.xml -Daether.connector.resumeDownloads=false -DskipTests -pl sub-1',
+           [[cmds   : 'mvn install -f sub-2/pom.xml -DskipTests -pl sub-1',
              workdir: 'test/resources/multi-module-profiled-project'],
-            [cmds   : 'mvn install -f sub-2/pom.xml -Daether.connector.resumeDownloads=false -DskipTests -pl subsub-2',
+            [cmds   : 'mvn install -f sub-2/pom.xml -DskipTests -pl subsub-2',
              workdir: 'test/resources/multi-module-profiled-project']
            ]]
       ]
@@ -165,7 +165,7 @@ class TestMavenParallelFlag extends BasePipelineSpecification {
     setup:
       configRule.addProperty('BUILDS_ROOT_PATH', 'test/resources/inter-module-dependency-project')
       JobItem jobItem = configRule.newJobItem(['buildFramework': 'Maven', 'parallelize': 'true'] + overrides)
-      MavenBuilder builder = BuilderFactory.builderFor(mockScript, jobItem) as MavenBuilder
+      MavenBuilder builder = BuilderFactory.builderFor(jobItem) as MavenBuilder
     when:
       List items = builder.expandWorkItem(jobItem)
     then:
@@ -187,66 +187,66 @@ class TestMavenParallelFlag extends BasePipelineSpecification {
           // override 1
           [[
                // parallel parent
-               [cmds: 'mvn clean install -Daether.connector.resumeDownloads=false -DskipTests -N'],
+               [cmds: 'mvn clean install -DskipTests -N'],
            ],
            [
                // parallel subgroup 1, all projects without parent dependencies
-               [cmds: 'mvn clean install -Daether.connector.resumeDownloads=false -DskipTests -pl sub-1'],
-               [cmds: 'mvn clean install -Daether.connector.resumeDownloads=false -DskipTests -pl sub-4'],
+               [cmds: 'mvn clean install -DskipTests -pl sub-1'],
+               [cmds: 'mvn clean install -DskipTests -pl sub-4'],
            ],
            [
                // parallel group 2, all projects that depends on previous subgroups
-               [cmds: 'mvn clean install -Daether.connector.resumeDownloads=false -DskipTests -pl sub-2'],
+               [cmds: 'mvn clean install -DskipTests -pl sub-2'],
            ],
            [
                // parallel group 3, all projects that depends on previous subgroups
-               [cmds: 'mvn clean install -Daether.connector.resumeDownloads=false -DskipTests -pl sub-5'],
-               [cmds: 'mvn clean install -Daether.connector.resumeDownloads=false -DskipTests -pl sub-3'],
+               [cmds: 'mvn clean install -DskipTests -pl sub-5'],
+               [cmds: 'mvn clean install -DskipTests -pl sub-3'],
            ]],
 
           // override 2
           [[
                // parallel parent
-               [cmds: 'mvn install -Daether.connector.resumeDownloads=false -DskipTests -N'],
+               [cmds: 'mvn install -DskipTests -N'],
            ],
            [
                // parallel subgroup 1, all projects without parent dependencies
-               [cmds: 'mvn install -Daether.connector.resumeDownloads=false -DskipTests -pl sub-1'],
+               [cmds: 'mvn install -DskipTests -pl sub-1'],
            ],
            [
                // parallel group 2, all projects that depends on previous subgroups
-               [cmds: 'mvn install -Daether.connector.resumeDownloads=false -DskipTests -pl sub-2'],
+               [cmds: 'mvn install -DskipTests -pl sub-2'],
            ],
            [
                // parallel group 3, all projects that depends on previous subgroups
-               [cmds: 'mvn install -Daether.connector.resumeDownloads=false -DskipTests -pl sub-3'],
+               [cmds: 'mvn install -DskipTests -pl sub-3'],
            ]],
 
           // override 3
           [[
                // parallel parent
-               [cmds: 'mvn install -Daether.connector.resumeDownloads=false -DskipTests -N'],
+               [cmds: 'mvn install -DskipTests -N'],
            ]],
 
           // override 4
           [[
                // parallel parent
-               [cmds: 'mvn install -Daether.connector.resumeDownloads=false -DskipTests -N'],
+               [cmds: 'mvn install -DskipTests -N'],
            ],
            [
                // parallel subgroup 1, all projects without parent dependencies
-               [cmds: 'mvn install -Daether.connector.resumeDownloads=false -DskipTests -pl sub-1'],
-               [cmds: 'mvn install -Daether.connector.resumeDownloads=false -DskipTests -pl sub-4'],
+               [cmds: 'mvn install -DskipTests -pl sub-1'],
+               [cmds: 'mvn install -DskipTests -pl sub-4'],
            ],
            [
                // parallel group 2, all projects that depends on previous subgroups
-               [cmds: 'mvn install -Daether.connector.resumeDownloads=false -DskipTests -pl sub-2'],
+               [cmds: 'mvn install -DskipTests -pl sub-2'],
            ]],
       ]
   }
 
   private assertBuildDirectives(JobItem jobItem, Map<String, Object> expected) {
-    MavenBuilder builder = BuilderFactory.builderFor(mockScript, jobItem) as MavenBuilder
+    MavenBuilder builder = BuilderFactory.builderFor(jobItem) as MavenBuilder
 
     Closure mvnBuild = builder.getBuildClosure(jobItem)
     mvnBuild()
