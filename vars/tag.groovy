@@ -119,7 +119,7 @@ Closure getItemExecution(JobItem jobItem, String tagName, String tagMessage) {
     utils.tagItem(jobItem, tagName, tagMessage)
     if ( jobItem.isCreateRelease() ) {// if is to create GH release
       dir(jobItem.checkoutDir) {
-        GitHubManager.createRelease(jobItem)
+        GitHubManager.createRelease(jobItem, tagName)
       }
     }
   }

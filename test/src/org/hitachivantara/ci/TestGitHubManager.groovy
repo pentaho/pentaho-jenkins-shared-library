@@ -110,7 +110,7 @@ class TestGitHubManager extends BasePipelineSpecification {
     )
 
     when:
-    GitHubManager.createRelease(item)
+    GitHubManager.createRelease(item, expectedTagName)
 
     then:
     noExceptionThrown()
