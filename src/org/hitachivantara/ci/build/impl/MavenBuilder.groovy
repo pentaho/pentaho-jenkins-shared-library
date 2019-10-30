@@ -459,7 +459,8 @@ class MavenBuilder extends AbstractBuilder implements IBuilder, Serializable {
         if (buildData.getBool(PR_STATUS_REPORTS)) {
           commandBuilder << "-Dsonar.pullrequest.github.repository=${item.scmInfo.organization}/${item.scmInfo.repository}"
         }
-      } else {
+      } else if (buildData.getString(BRANCH_NAME) != 'master') {
+        // send branch name only if it's not master, sending master on a first scan causes error
         commandBuilder << "-Dsonar.branch.name=${buildData.getString(BRANCH_NAME)}"
       }
 
