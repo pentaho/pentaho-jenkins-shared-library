@@ -14,8 +14,8 @@ import org.hitachivantara.ci.JobItem
 import org.hitachivantara.ci.StringUtils
 import org.hitachivantara.ci.build.BuildException
 import org.hitachivantara.ci.build.Builder
-import org.hitachivantara.ci.build.PipelineSignalException
 import org.hitachivantara.ci.build.BuilderFactory
+import org.hitachivantara.ci.build.PipelineSignalException
 import org.hitachivantara.ci.config.BuildData
 import org.jenkinsci.plugins.workflow.cps.CpsScript
 
@@ -168,7 +168,7 @@ class BuilderUtils implements Serializable {
         throw new PipelineSignalException(Result.ABORTED, "Job item was terminated by ${getSignalName(errorSignal)}")
       }
       if (abort) {
-        throw new BuildException("script returned exit code $exitCode")
+        throw new BuildException(cmd, "script returned exit code $exitCode")
       }
     }
     return exitCode
@@ -193,7 +193,7 @@ class BuilderUtils implements Serializable {
         throw new PipelineSignalException(Result.ABORTED, "Job item was terminated by ${getSignalName(errorSignal)}")
       }
       if (abort) {
-        throw err
+        throw new BuildException(cmd, err.message)
       }
     }
     return ""

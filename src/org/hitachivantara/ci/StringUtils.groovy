@@ -5,6 +5,9 @@
  */
 package org.hitachivantara.ci
 
+import com.cloudbees.groovy.cps.NonCPS
+import org.hitachivantara.ci.build.BuildException
+
 import java.text.Normalizer
 import java.time.Duration
 import java.util.regex.Matcher
@@ -14,7 +17,7 @@ class StringUtils implements Serializable {
   static String DEFAULT_REPLACER = '_'
   static Pattern DIACRITICALMARKS = Pattern.compile('[\\p{InCombiningDiacriticalMarks}\\p{IsLm}\\p{IsSk}]+')
   static Map NONDIACRITICS = [
-      // crap chars with no semantics
+      // crop chars with no semantics
       '\"': '',
       '\'': '',
 
@@ -105,5 +108,32 @@ class StringUtils implements Serializable {
       }
     }
     return lines.join(lineBreak)
+  }
+
+  @NonCPS
+  static void printStackTrace(Throwable t, PrintWriter w) {
+    w.println(t)
+
+    if (t instanceof BuildException) {
+      w.println("    with command: '${t.command}'")
+    }
+
+    def exclusions = ['org.codehaus', 'com.cloudbees', 'sun', 'java', 'hudson', 'org.jenkinsci', 'jenkins', 'groovy']
+    for (traceElement in t.getStackTrace()) {
+      String className = traceElement.className
+      if (className == '___cps') {
+        break
+      }
+      if (exclusions.any { className.startsWith(it) }) {
+        continue
+      }
+      w.println("  at $traceElement")
+    }
+
+    Throwable cause = t.cause
+    if (cause != null) {
+      w.print("Caused by: ")
+      printStackTrace(cause, w)
+    }
   }
 }

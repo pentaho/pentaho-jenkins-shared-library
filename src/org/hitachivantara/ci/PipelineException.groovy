@@ -5,8 +5,15 @@
  */
 package org.hitachivantara.ci
 
+import com.cloudbees.groovy.cps.NonCPS
 import groovy.transform.InheritConstructors
 
 @InheritConstructors
 abstract class PipelineException extends RuntimeException {
+
+  @Override
+  @NonCPS
+  void printStackTrace(PrintWriter s) {
+    StringUtils.printStackTrace(this, s)
+  }
 }
