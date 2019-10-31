@@ -5,7 +5,7 @@
  */
 package org.hitachivantara.ci
 
-
+import org.hitachivantara.ci.config.BuildClock
 import org.hitachivantara.ci.config.BuildDataBuilder
 import org.hitachivantara.ci.config.BuildData
 import org.hitachivantara.ci.config.ConfigurationException
@@ -18,12 +18,17 @@ import org.junit.Rule
 import org.junit.rules.RuleChain
 import spock.lang.Unroll
 
+import java.time.Instant
+import java.time.ZoneId
+import java.time.ZoneOffset
+
 import static org.hitachivantara.ci.JobItem.ExecutionType.AUTO
 import static org.hitachivantara.ci.JobItem.ExecutionType.FORCE
 import static org.hitachivantara.ci.JobItem.ExecutionType.NOOP
 import static org.hitachivantara.ci.build.BuildFramework.DSL_SCRIPT
 import static org.hitachivantara.ci.build.BuildFramework.JENKINS_JOB
 import static org.hitachivantara.ci.build.BuildFramework.MAVEN
+import static org.hitachivantara.ci.config.LibraryProperties.TAG_NAME
 
 class TestConfiguration extends BasePipelineSpecification {
 
@@ -645,6 +650,38 @@ class TestConfiguration extends BasePipelineSpecification {
         preBuildItems.first().buildFramework == DSL_SCRIPT &&
         postBuildItems.last().jobID == 'job-2' &&
         postBuildItems.last().buildFramework == JENKINS_JOB
+  }
+
+  def "test tag name expression evaluation"() {
+    setup:
+      BuildData buildData = BuildData.instance
+
+      buildData.clock = Spy(BuildClock) {
+        instant() >> Instant.parse('2019-12-03T12:30:00.00Z')
+        getZone() >> ZoneId.ofOffset('UTC', ZoneOffset.of('Z'))
+      }
+
+      BuildData bd = new BuildDataBuilder()
+        .withParams([
+          TAG_NAME: tagName,
+        ])
+        .build()
+
+    when:
+      String evaluated = bd.getString(TAG_NAME)
+
+    then:
+      expected == evaluated
+
+    cleanup:
+      buildData.reset()
+
+    where:
+      tagName             | expected
+      'date|yyyyMMdd-10'  | '20191203-10'
+      "date|yyyy-'rc'"    | '2019-rc'
+      'date|HH.mm-325'    | '12.30-325'
+      'tag-not-evaluated' | 'tag-not-evaluated'
   }
 
 }
