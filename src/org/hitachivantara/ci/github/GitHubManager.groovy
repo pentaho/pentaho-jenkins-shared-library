@@ -24,6 +24,7 @@ import static org.hitachivantara.ci.config.LibraryProperties.CHANGE_ID
 import static org.hitachivantara.ci.config.LibraryProperties.JOB_NAME
 import static org.hitachivantara.ci.config.LibraryProperties.RELEASE_BUILD_NUMBER
 import static org.hitachivantara.ci.config.LibraryProperties.SCM_CREDENTIALS_ID
+import static org.hitachivantara.ci.config.LibraryProperties.TAG_NAME
 import static org.hitachivantara.ci.config.LibraryProperties.TICKET_ID_PATTERN
 import static org.hitachivantara.ci.config.LibraryProperties.TICKET_MANAGER_URL
 
@@ -38,10 +39,10 @@ class GitHubManager implements Serializable {
    * @param jobItem
    * @return
    */
-  static void createRelease(JobItem jobItem, String tagName) {
+  static void createRelease(JobItem jobItem) {
     BuildData buildData = BuildData.instance
 
-    Map<String, Object> changeSetListData = getChangeListData(jobItem, tagName)
+    Map<String, Object> changeSetListData = getChangeListData(jobItem, buildData.getString(TAG_NAME))
     List<GitChangeSet> changeSetList = changeSetListData['CHANGE_LIST']
 
     if (changeSetList) {
@@ -58,12 +59,12 @@ class GitHubManager implements Serializable {
       Boolean releasedSaved = steps.createGithubRelease(
         credentials: buildData.getString(SCM_CREDENTIALS_ID),
         repository: "${jobItem.scmOrganization}/${jobItem.scmRepository}",
-        name: tagName,
+        name: "${buildData.getString(TAG_NAME)}",
         text: bodyText
       )
 
       if (releasedSaved) {
-        buildData.release([('link') : "${(jobItem.scmUrl - '.git')}/releases/${tagName}",
+        buildData.release([('link') : "${(jobItem.scmUrl - '.git')}/releases/${buildData.getString(TAG_NAME)}",
                            ('label'): "${jobItem.scmOrganization}/${jobItem.scmRepository}"])
       }
     } else {

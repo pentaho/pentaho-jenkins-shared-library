@@ -62,7 +62,7 @@ void runStage(BuildData buildData) {
   int totalChunks = jobItemPartitions.size()
   boolean singleChunk = totalChunks <= 1
 
-  String tagName = utils.evaluateTagName(buildData.getString(TAG_NAME))
+  String tagName = buildData.getString(TAG_NAME)
   String tagMessage = buildData.getString(TAG_MESSAGE)
 
   jobItemPartitions.eachWithIndex { List<JobItem> jobItemsChunk, int currentChunk ->
@@ -119,7 +119,7 @@ Closure getItemExecution(JobItem jobItem, String tagName, String tagMessage) {
     utils.tagItem(jobItem, tagName, tagMessage)
     if ( jobItem.isCreateRelease() ) {// if is to create GH release
       dir(jobItem.checkoutDir) {
-        GitHubManager.createRelease(jobItem, tagName)
+        GitHubManager.createRelease(jobItem)
       }
     }
   }

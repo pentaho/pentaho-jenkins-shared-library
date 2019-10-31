@@ -322,27 +322,3 @@ void pushItem(JobItem item) {
     }
   }
 }
-
-/**
- * Evaluate a given tag name to provide dynamic tag naming expressions
- *
- * Currently supported expressions:
- * - date|<format expression> : date|yyyyMMdd-${BUILD_NUMBER}
- *
- * @param tagName
- * @return
- */
-String evaluateTagName(String tagName) {
-  List parts = tagName.tokenize('|')
-
-  if (parts.size() < 2) {
-    return tagName
-  }
-
-  switch (parts[0]) {
-    case 'date':
-      return BuildData.instance.clock.format(parts[1])
-    default:
-      return tagName
-  }
-}

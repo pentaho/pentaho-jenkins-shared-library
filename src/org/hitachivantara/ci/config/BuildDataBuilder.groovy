@@ -24,6 +24,7 @@ import static org.hitachivantara.ci.config.LibraryProperties.LOG_LEVEL
 import static org.hitachivantara.ci.config.LibraryProperties.OVERRIDE_JOB_PARAMS
 import static org.hitachivantara.ci.config.LibraryProperties.OVERRIDE_PARAMS
 import static org.hitachivantara.ci.config.LibraryProperties.PUSH_CHANGES
+import static org.hitachivantara.ci.config.LibraryProperties.TAG_NAME
 import static org.hitachivantara.ci.config.LibraryProperties.WORKSPACE
 
 class BuildDataBuilder {
@@ -187,7 +188,7 @@ class BuildDataBuilder {
    *
    * @param buildProperties
    */
-  private void sanitize(Map buildProperties) {
+  private void sanitize(ConfigurationMap buildProperties) {
     // Some properties are dependent of the job's name,
     // we calculate and inject them here
     if (StringUtils.isEmpty(buildProperties[BUILD_VERSIONS_FILE])) {
@@ -200,9 +201,12 @@ class BuildDataBuilder {
     // as the workspace folder and that will not work with our implementation.
     // Here we get the WORKSPACE value from the buildProperties, which might come from
     // any of our configuration sources, but will most likely come from the environment and store it
-    // on the buildProperties in its base map. See FilteredMapWithDefault to understand that this is
+    // on the buildProperties in its base map. See ConfigurationMap to understand that this is
     // not an "x=x" scenario.
-    buildProperties[WORKSPACE] = buildProperties[WORKSPACE]
+    buildProperties[WORKSPACE] = buildProperties.getString(WORKSPACE)
+
+    // evaluate dynamic tag name
+    buildProperties[TAG_NAME] = evaluateTagName(buildProperties.getString(TAG_NAME))
 
     // apply minion specific sanitization
     MinionHandler.sanitize(buildProperties)
@@ -403,5 +407,29 @@ class BuildDataBuilder {
       }
     }
     throw new ConfigurationFileNotFoundException("Configuration file not found! ${configPath}")
+  }
+
+  /**
+   * Evaluate a given tag name to provide dynamic tag naming expressions
+   *
+   * Currently supported expressions:
+   * - date|<format expression> : date|yyyyMMdd-${BUILD_NUMBER}
+   *
+   * @param tagName
+   * @return
+   */
+  String evaluateTagName(String tagName) {
+    List parts = tagName.tokenize('|')
+
+    if (parts.size() < 2) {
+      return tagName
+    }
+
+    switch (parts[0]) {
+      case 'date':
+        return BuildData.instance.clock.format(parts[1])
+      default:
+        return tagName
+    }
   }
 }

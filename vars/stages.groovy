@@ -219,7 +219,7 @@ void push(String id = 'push', String label = '') {
 }
 
 void tag(String id = 'tag', String label = '') {
-  String tagName = utils.evaluateTagName(buildData.getString(TAG_NAME))
+  String tagName = buildData.getString(TAG_NAME)
   String tagMessage = buildData.getString(TAG_MESSAGE)
 
   new ParallelItemWorkStage(id: id, label: label ?: id.capitalize(),
@@ -231,7 +231,7 @@ void tag(String id = 'tag', String label = '') {
       utils.tagItem(item, tagName, tagMessage)
 
       if (item.isCreateRelease()) {
-        GitHubManager.createRelease(item, tagName)
+        GitHubManager.createRelease(item)
       }
     }
   ).run()
