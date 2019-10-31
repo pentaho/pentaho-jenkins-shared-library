@@ -206,6 +206,41 @@ void postClean(String label = 'Post Clean') {
   ).run()
 }
 
+void cleanup(String label = 'Cleanup') {
+  new SimpleStage(id: 'cleanup', label: label,
+    body: {
+      if (buildData.getBool(CLEAN_BUILD_WORKSPACE)) {
+        retry(buildData.getInt(BUILD_RETRIES)) {
+          clean.workspace()
+        }
+        return
+      }
+
+      if (buildData.getBool(CLEAN_ALL_CACHES)) {
+        retry(buildData.getInt(BUILD_RETRIES)) {
+          clean.caches()
+        }
+      } else if (buildData.isSet(CLEAN_CACHES_REGEX)) {
+        retry(buildData.getInt(BUILD_RETRIES)) {
+          clean.caches(buildData.getString(CLEAN_CACHES_REGEX))
+        }
+      }
+
+      if (buildData.getBool(CLEAN_SCM_WORKSPACES)) {
+        retry(buildData.getInt(BUILD_RETRIES)) {
+          clean.checkouts(true)
+        }
+      }
+    },
+    isRun: {
+      buildData.getBool(CLEAN_BUILD_WORKSPACE) ||
+      buildData.isSet(CLEAN_CACHES_REGEX) ||
+      buildData.getBool(CLEAN_ALL_CACHES) ||
+      buildData.getBool(CLEAN_SCM_WORKSPACES)
+    }
+  ).run()
+}
+
 void push(String id = 'push', String label = '') {
   new ParallelItemWorkStage(id: id, label: label ?: id.capitalize(),
     ignoreGroups: true,
