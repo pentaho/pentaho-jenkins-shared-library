@@ -105,6 +105,7 @@ JOB_ITEM_DEFAULTS:
   scmCredentials: ${SCM_CREDENTIALS_ID}
   scmScanInterval: ''
   scmPoll: false
+  scmProtectBranch: false
 
   # Build
   buildFramework: MAVEN

@@ -99,12 +99,12 @@ class ScmUtils implements Serializable {
   }
 
   @NonCPS
-  static protected String deriveLocalBranchName(String branchName) {
+  static String deriveLocalBranchName(String branchName) {
     String name = getRemoteRefSpecPattern(branchName)
     // convert branchName `refs/(heads|tags|whatever)/branch` into shortcut notation `remote/branch`
     Matcher matcher = GIT_REF.matcher(name)
     matcher.matches() //always true
-    return matcher.group(2).replaceFirst('^[^/]+/', '')
+    return matcher.group(2)
   }
 
   @NonCPS

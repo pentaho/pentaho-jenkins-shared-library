@@ -3,6 +3,7 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
+
 package org.hitachivantara.ci.github
 
 import com.cloudbees.groovy.cps.NonCPS
@@ -205,85 +206,54 @@ class GitHubManager implements Serializable {
       BuildData buildData = BuildData.instance
       Integer prNumber = buildData.getInt(CHANGE_ID)
       String owner = src.getRepoOwner()
-      String repository = src.getRepository()
-
-      Map data = getPullRequestWithComments(owner, repository, prNumber)
-      String pullRequestId = data.data.repository.pullRequest.id
+      String name = src.getRepository()
+      GitHubRepository repository = new GitHubRepository(owner, name)
+      GitHubPullRequest pullRequest = repository.getPullRequest(prNumber)
 
       // minimize previous comments
-      List<Map> comments = data.data.repository.pullRequest.comments.nodes.findAll { Map node -> node.viewerDidAuthor & !node.isMinimized }
-      comments.each { Map comment ->
-        hideComment(comment.id as String, GitHubMinimizeContentReason.OUTDATED)
+      List<IssueComment> comments = pullRequest.comments.findAll { issueComment -> issueComment.viewerDidAuthor & !issueComment.isMinimized }
+      comments.each { IssueComment comment ->
+        comment.hide(GitHubMinimizeContentReason.OUTDATED)
       }
 
       // add new comment
-      addComment(pullRequestId, body)
+      pullRequest.comment(body)
     }
   }
 
-  private static Map getPullRequestWithComments(String owner, String name, Integer number) throws GitHubException {
-    execute('''\
-        query GetPullRequestWithComments($owner: String!, $name: String!, $prNumber: Int!) {
-          repository(owner: $owner, name: $name) {
-            pullRequest: issueOrPullRequest(number: $prNumber) {
-              ... on PullRequest {
-                id
-                comments: timelineItems(last: 10, itemTypes: [ISSUE_COMMENT]) {
-                  nodes {
-                    ... on IssueComment {
-                      id
-                      isMinimized
-                      viewerDidAuthor
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }''',
-      ['owner': owner, 'name': name, 'prNumber': number]
-    )
-  }
-
-  /** Adds a comment to an Issue or Pull Request.
-   * @param pullRequest The Node ID of the subject to modify.
-   * @param body The contents
-   * @throws GitHubException
+  /** Create or update a Github branch protection rule
+   * @param item  JobItem
    */
-  private static void addComment(String pullRequest, String body) throws GitHubException {
-    execute('''\
-      mutation AddComment($pullRequest: ID!, $body: String!) {
-        addComment(input: { subjectId: $pullRequest, body: $body }) {
-          commentEdge {
-            node { id }
-          }
-        }
-      }''',
-      ['pullRequest': pullRequest, 'body': body]
-    )
+  static void registerBranchProtectionRule(JobItem item) {
+    String owner = item.scmInfo.organization
+    String name = item.scmInfo.repository
+    String branch = ScmUtils.deriveLocalBranchName(item.scmBranch)
+    Boolean protectBranch = item.scmProtectBranch
+    Set<String> requiredStatusCheckContexts = [item.prStatusLabel]
+
+    GitHubRepository repository = new GitHubRepository(owner, name)
+
+    GitHubBranchProtection branchProtection = repository.getBranchProtection()
+    // search in the current protected branches for a match
+    List rules = branchProtection.rules.findAll { rule -> rule.matches(branch) }
+    if (protectBranch) {
+      if (rules) {
+        rules.each { rule -> rule.addStatusChecks(requiredStatusCheckContexts) }
+        steps.log.debug "Updated branch protection rules", rules
+      } else {
+        def rule = branchProtection.createProtectionRule(branch, requiredStatusCheckContexts)
+        steps.log.debug "Created new branch protection rule", rule
+      }
+    } else {
+      // in case we want to revert any rule changes previously made
+      if (rules) {
+        rules.each { rule -> rule.removeStatusChecks(requiredStatusCheckContexts) }
+        steps.log.debug "Reverted branch protection rules", rules
+      }
+    }
   }
 
-
-  /** Minimizes a comment on an Issue, Commit, Pull Request, or Gist
-   * @param commentId The Node ID of the subject to modify.
-   * @param readon The reason why to minimize
-   * @throws GitHubException
-   */
-  private static void hideComment(String commentId, GitHubMinimizeContentReason reason) throws GitHubException {
-    execute('''\
-      mutation HideComment($commentId: ID!, $reason: ReportedContentClassifiers!) {
-        minimizeComment(input: { subjectId: $commentId, classifier: $reason }) {
-          minimizedComment {
-            isMinimized
-            minimizedReason
-          }
-        }
-      }''',
-      ['commentId': commentId, 'reason': reason.name()]
-    )
-  }
-
-  private static Map execute(String query, Map variables) throws GitHubException {
+  static Map execute(String query, Map variables) throws GitHubException {
     GitHubClient gh = new GitHubClient()
     GitHubRequest request = gh.buildRequest(query, variables)
     steps.log.debug "GraphQL query:", ['query': query.stripIndent(), 'variables': variables]
@@ -292,6 +262,7 @@ class GitHubManager implements Serializable {
       steps.log.error "Query did not succeed!", data
       throw new GitHubException("Something went wrong!")
     }
+    steps.log.debug "GraphQL result:", data
     return data
   }
 }
