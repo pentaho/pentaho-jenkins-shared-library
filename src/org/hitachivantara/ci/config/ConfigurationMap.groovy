@@ -210,6 +210,21 @@ class ConfigurationMap<K, V> extends LinkedHashMap<K, V> {
 
   @NonCPS
   Map getRawMap() {
-    keySet().collectEntries { k -> [(k): super.get(k)] } as LinkedHashMap
+    keySet().collectEntries { k ->
+      def value = super.get(k)
+
+      switch (value) {
+        case ConfigurationMap:
+          value = (value as ConfigurationMap).getRawMap()
+          break
+        case Enum:
+          value = value.toString()
+          break
+        default:
+          break
+      }
+
+      [(k): value]
+    } as LinkedHashMap
   }
 }

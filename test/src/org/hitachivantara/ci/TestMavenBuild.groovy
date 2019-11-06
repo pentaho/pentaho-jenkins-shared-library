@@ -66,27 +66,37 @@ class TestMavenBuild extends BasePipelineSpecification {
   @Unroll
   def "build command for #jobData"() {
     setup:
-      configRule.buildProperties['MAVEN_DEFAULT_COMMAND_OPTIONS'] = '-B -e'
+      configRule.addProperty('MAVEN_DEFAULT_COMMAND_OPTIONS', '-B -e')
+      configRule.addProperty('MAVEN_DEFAULT_DIRECTIVES', 'clean install')
+      configRule.addProperty('MAVEN_PR_DEFAULT_DIRECTIVES', 'clean verify')
+      configRule.addProperty('CHANGE_ID', isPr ? '123' : null)
+
       JobItem jobItem = configRule.newJobItem(jobData)
 
     when:
-      IBuilder builder = BuilderFactory.builderFor(jobItem)
-      builder.getBuildClosure(jobItem).call()
+      Builder builder = BuilderFactory.builderFor(jobItem)
+      builder.getExecution().call()
 
     then:
       shellRule.cmds[0] == expected
 
     where:
       jobData << [
-        ['buildFramework': 'Maven'],
-        ['buildFramework': 'Maven', 'directives': 'package', 'execType': 'force',],
-        ['buildFramework': 'Maven', 'directives': 'install', 'buildFile': './core/pom.xml']
+        [buildFramework: 'Maven'],
+        [buildFramework: 'Maven', directives: 'package', execType: 'force'],
+        [buildFramework: 'Maven', directives: 'install', buildFile: './core/pom.xml'],
+        [buildFramework: 'Maven'],
+        [buildFramework: 'Maven', directives: '-= install += deploy'],
+        [buildFramework: 'Maven', prDirectives: '-= verify += integration-test']
       ]
-
+      isPr << [false, false, false, true, false, true]
       expected << [
-        'mvn clean install -B -e -DskipTests',
-        'mvn package -B -e -DskipTests',
-        'mvn install -B -e -f ./core/pom.xml -DskipTests'
+        'mvn clean install -B -e',
+        'mvn package -B -e',
+        'mvn install -B -e -f ./core/pom.xml',
+        'mvn clean verify -B -e',
+        'mvn clean deploy -B -e',
+        'mvn clean integration-test -B -e'
       ]
   }
 
