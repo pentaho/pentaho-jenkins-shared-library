@@ -143,6 +143,7 @@ void archive(String id = 'archive', String label = '') {
   new ParallelItemWorkStage(id: id, label: label ?: id.capitalize(),
     ignoreGroups: true,
     allowMinions: true,
+    allowContainers: false,
     itemFilter: { List<JobItem> items ->
       items.findAll { JobItem item -> item.archivable }
     },
