@@ -42,6 +42,33 @@ class BranchProtectionRule implements Serializable {
     }
   }
 
+  static BranchProtectionRule create(String repoID, String pattern, Set<String> statusCheckContexts) {
+    Map result = GitHubManager.execute('''\
+      mutation createProtectBranch($repoID: ID!, $pattern: String!, $requiredStatusCheckContexts: [String!]) {
+        branchProtection: createBranchProtectionRule(input: {
+          repositoryId: $repoID,
+          pattern: $pattern,
+          requiresStatusChecks: true,
+          requiredStatusCheckContexts: $requiredStatusCheckContexts,
+        }) 
+        {
+          rule: branchProtectionRule {
+            id
+            pattern
+            requiredStatusCheckContexts
+          }
+        }
+      }''',
+      ['repoID': repoID, 'pattern': pattern, 'requiredStatusCheckContexts': statusCheckContexts]
+    )
+    new BranchProtectionRule().with {
+      it.id = result.data.branchProtection.rule.id
+      it.pattern = result.data.branchProtection.rule.pattern
+      it.requiredStatusCheckContexts = result.data.branchProtection.rule.requiredStatusCheckContexts
+      return it
+    }
+  }
+
   protected void update() {
     GitHubManager.execute('''\
         mutation updateProtectionRule($ruleID: ID!, $pattern: String, $requiresStatusChecks: Boolean, $requiredStatusCheckContexts: [String!]) {

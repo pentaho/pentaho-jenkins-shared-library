@@ -233,15 +233,15 @@ class GitHubManager implements Serializable {
 
     GitHubRepository repository = new GitHubRepository(owner, name)
 
-    GitHubBranchProtection branchProtection = repository.getBranchProtection()
+    GitHubBranchProtectionRules branchProtectionRules = repository.getBranchProtectionRules()
     // search in the current protected branches for a match
-    List rules = branchProtection.rules.findAll { rule -> rule.matches(branch) }
+    List rules = branchProtectionRules.findRules(branch)
     if (protectBranch) {
       if (rules) {
         rules.each { rule -> rule.addStatusChecks(requiredStatusCheckContexts) }
         steps.log.debug "Updated branch protection rules", rules
       } else {
-        def rule = branchProtection.createProtectionRule(branch, requiredStatusCheckContexts)
+        def rule = branchProtectionRules.createProtectionRule(branch, requiredStatusCheckContexts)
         steps.log.debug "Created new branch protection rule", rule
       }
     } else {

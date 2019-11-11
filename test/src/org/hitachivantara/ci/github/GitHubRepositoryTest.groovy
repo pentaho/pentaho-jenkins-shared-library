@@ -79,7 +79,7 @@ class GitHubRepositoryTest extends BasePipelineSpecification {
         }
       ])
     when:
-      def branchProtectionRule = repository.getBranchProtection()
+      def branchProtectionRule = repository.getBranchProtectionRules()
     then:
       verifyAll {
         branchProtectionRule.id == '1'

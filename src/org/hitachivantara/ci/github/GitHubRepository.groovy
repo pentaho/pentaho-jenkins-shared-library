@@ -19,7 +19,7 @@ class GitHubRepository implements Serializable {
     return GitHubPullRequest.get(owner, name, prNumber)
   }
 
-  GitHubBranchProtection getBranchProtection() {
-    return GitHubBranchProtection.get(owner, name)
+  GitHubBranchProtectionRules getBranchProtectionRules() {
+    return GitHubBranchProtectionRules.get(owner, name)
   }
 }

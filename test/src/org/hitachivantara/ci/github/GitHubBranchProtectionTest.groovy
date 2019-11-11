@@ -48,14 +48,14 @@ class GitHubBranchProtectionTest extends BasePipelineSpecification {
         new BranchProtectionRule(pattern: 'master', requiredStatusCheckContexts: ['Other CI Validation']),
         new BranchProtectionRule(pattern: '*release*', requiredStatusCheckContexts: ['Other CI Validation']),
       ]
-      GitHubBranchProtection branchProtection = new GitHubBranchProtection(rules: rules)
+      GitHubBranchProtectionRules branchProtection = new GitHubBranchProtectionRules(rules: rules)
       JobItem jobItem = Mock(JobItem) {
         getScmBranch() >> ('master')
         getPrStatusLabel() >> ('CI Build')
         getScmInfo() >> (['organization': 'owner', 'repository': 'name'])
         isScmProtectBranch() >> (true)
       }
-      replacements.addReplacement(GitHubBranchProtection, ['static.get': { String owner, String name -> branchProtection }])
+      replacements.addReplacement(GitHubBranchProtectionRules, ['static.get': { String owner, String name -> branchProtection }])
     when:
       GitHubManager.registerBranchProtectionRule(jobItem)
     then:
@@ -67,6 +67,35 @@ class GitHubBranchProtectionTest extends BasePipelineSpecification {
         branchProtection.rules[1].pattern == '*release*'
         branchProtection.rules[1].requiredStatusCheckContexts.size() == 1
         branchProtection.rules[1].requiredStatusCheckContexts.contains('Other CI Validation')
+
+      }
+  }
+
+  def "test rule direct matching has priority over glob pattern"() {
+    given:
+      List<BranchProtectionRule> rules = [
+        new BranchProtectionRule(pattern: 'RC-*', requiredStatusCheckContexts: ['Other CI Validation']),
+        new BranchProtectionRule(pattern: 'RC-3', requiredStatusCheckContexts: ['Other CI Validation']),
+      ]
+      GitHubBranchProtectionRules branchProtection = new GitHubBranchProtectionRules(rules: rules)
+      JobItem jobItem = Mock(JobItem) {
+        getScmBranch() >> ('RC-3')
+        getPrStatusLabel() >> ('CI Build')
+        getScmInfo() >> (['organization': 'owner', 'repository': 'name'])
+        isScmProtectBranch() >> (true)
+      }
+      replacements.addReplacement(GitHubBranchProtectionRules, ['static.get': { String owner, String name -> branchProtection }])
+    when:
+      GitHubManager.registerBranchProtectionRule(jobItem)
+    then:
+      verifyAll {
+        branchProtection.rules.size() == 2
+        branchProtection.rules[0].pattern == 'RC-*'
+        branchProtection.rules[0].requiredStatusCheckContexts.size() == 1
+        branchProtection.rules[0].requiredStatusCheckContexts.contains('Other CI Validation')
+        branchProtection.rules[1].pattern == 'RC-3'
+        branchProtection.rules[1].requiredStatusCheckContexts.size() == 2
+        branchProtection.rules[1].requiredStatusCheckContexts.containsAll(['Other CI Validation', 'CI Build'])
 
       }
   }
@@ -122,14 +151,14 @@ class GitHubBranchProtectionTest extends BasePipelineSpecification {
       List<BranchProtectionRule> rules = [
         new BranchProtectionRule(pattern: '*release*', requiredStatusCheckContexts: ['Other CI Validation']),
       ]
-      GitHubBranchProtection branchProtection = new GitHubBranchProtection(rules: rules)
+      GitHubBranchProtectionRules branchProtection = new GitHubBranchProtectionRules(rules: rules)
       JobItem jobItem = Mock(JobItem) {
         getScmBranch() >> ('heads/qa/master')
         getPrStatusLabel() >> ('CI Build')
         getScmInfo() >> (['organization': 'owner', 'repository': 'name'])
         isScmProtectBranch() >> (true)
       }
-      replacements.addReplacement(GitHubBranchProtection, ['static.get': { String owner, String name -> branchProtection }])
+      replacements.addReplacement(GitHubBranchProtectionRules, ['static.get': { String owner, String name -> branchProtection }])
       replacements.addReplacement(GitHubManager, ['static.execute': { String query, Map variables ->
         [data: [branchProtection: [rule: [id: '1', pattern: 'qa/master', requiredStatusCheckContexts: ['CI Build']]]]]
       }])
@@ -150,14 +179,14 @@ class GitHubBranchProtectionTest extends BasePipelineSpecification {
       List<BranchProtectionRule> rules = [
         new BranchProtectionRule(pattern: 'master', requiredStatusCheckContexts: ['Other CI Validation', 'CI Build']),
       ]
-      GitHubBranchProtection branchProtection = new GitHubBranchProtection(rules: rules)
+      GitHubBranchProtectionRules branchProtection = new GitHubBranchProtectionRules(rules: rules)
       JobItem jobItem = Mock(JobItem) {
         getScmBranch() >> ('master')
         getPrStatusLabel() >> ('CI Build')
         getScmInfo() >> (['organization': 'owner', 'repository': 'name'])
         isScmProtectBranch() >> (false)
       }
-      replacements.addReplacement(GitHubBranchProtection, ['static.get': { String owner, String name -> branchProtection }])
+      replacements.addReplacement(GitHubBranchProtectionRules, ['static.get': { String owner, String name -> branchProtection }])
     when:
       GitHubManager.registerBranchProtectionRule(jobItem)
     then:

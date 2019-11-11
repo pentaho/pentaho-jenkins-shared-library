@@ -8,12 +8,12 @@ package org.hitachivantara.ci.github
 
 import com.cloudbees.groovy.cps.NonCPS
 
-class GitHubBranchProtection implements Serializable {
+class GitHubBranchProtectionRules implements Serializable {
   String id
   String fullName
   List<BranchProtectionRule> rules
 
-  static GitHubBranchProtection get(String owner, String name) throws GitHubException {
+  static GitHubBranchProtectionRules get(String owner, String name) throws GitHubException {
     Map result = GitHubManager.execute('''\
       query getBranchProtectionRule($owner: String!, $name: String!) {
         repository(owner: $owner, name: $name) {
@@ -30,7 +30,7 @@ class GitHubBranchProtection implements Serializable {
       }''',
       ['owner': owner, 'name': name]
     )
-    return new GitHubBranchProtection().with {
+    return new GitHubBranchProtectionRules().with {
       it.id = result.data.repository.id
       it.fullName = "$owner/$name"
       it.rules = result.data.repository.rules.nodes?.collect { rule ->
@@ -47,32 +47,29 @@ class GitHubBranchProtection implements Serializable {
   }
 
   BranchProtectionRule createProtectionRule(String pattern, Set<String> statusCheckContexts) {
-    Map result = GitHubManager.execute('''\
-      mutation createProtectBranch($repoID: ID!, $pattern: String!, $requiredStatusCheckContexts: [String!]) {
-        branchProtection: createBranchProtectionRule(input: {
-          repositoryId: $repoID,
-          pattern: $pattern,
-          requiresStatusChecks: true,
-          requiredStatusCheckContexts: $requiredStatusCheckContexts,
-        }) 
-        {
-          rule: branchProtectionRule {
-            id
-            pattern
-            requiredStatusCheckContexts
-          }
-        }
-      }''',
-      ['repoID': id, 'pattern': pattern, 'requiredStatusCheckContexts': statusCheckContexts]
-    )
-    BranchProtectionRule rule = new BranchProtectionRule().with {
-      it.id = result.data.branchProtection.rule.id
-      it.pattern = result.data.branchProtection.rule.pattern
-      it.requiredStatusCheckContexts = result.data.branchProtection.rule.requiredStatusCheckContexts
-      return it
-    }
+    BranchProtectionRule rule = BranchProtectionRule.create(id, pattern, statusCheckContexts)
     rules.add(rule)
     return rule
+  }
+
+  /**
+   * Find the Rules that best matches a given branch name.
+   * Any full pattern match as higher precedence when resolving.
+   * @param branch
+   * @return
+   */
+  List<BranchProtectionRule> findRules(String branch) {
+    List rules = rules.findAll { rule -> rule.matches(branch) }
+    if (rules?.size() > 1) {
+      // from the remaining list of rules, find the one that is a direct match
+      // if none, return all matched rules
+      for (BranchProtectionRule rule in rules) {
+        if (rule.pattern == branch) {
+          return [rule]
+        }
+      }
+    }
+    return rules
   }
 
   @NonCPS
