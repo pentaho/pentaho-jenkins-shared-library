@@ -41,8 +41,8 @@ class JobItem implements Serializable {
       (SCMConnectionType.SSH) : Pattern.compile(/git@([\w-\.]+):(?<org>[\w-]+)\/(?<repo>[\w-]+)\.git/)
   ]
 
-  private Map<String, Object> data
-  private Map<String, Object> buildProperties
+  private ConfigurationMap<String, Object> data
+  private ConfigurationMap<String, Object> buildProperties
 
   // User configurable properties
   private static final List configurable = [
@@ -521,14 +521,8 @@ class JobItem implements Serializable {
     data
   }
 
-  Map export() {
-    Map exportingData = getJobData().subMap(configurable).collectEntries { String key, Object value ->
-      if (value?.class?.isEnum()) {
-        value = value.toString()
-      }
-      [(key): value]
-    }
-    return exportingData
+  Map export(Boolean raw = false) {
+    (raw ? data.getRawMap() : data).subMap(configurable)
   }
 
   @NonCPS

@@ -252,10 +252,10 @@ class MinionHandler {
     buildProperties.put(PR_SLACK_CHANNEL, jobItem.prSlackChannel)
 
     return [
-      buildProperties: buildProperties,
+      buildProperties: buildProperties.getRawMap(),
       jobGroups      : [
         (jobItem.jobGroup): [
-          jobItem.export()
+          jobItem.export(true)
         ]
       ]
     ]
