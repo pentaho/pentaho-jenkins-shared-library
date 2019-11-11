@@ -17,6 +17,7 @@ import static org.hitachivantara.ci.config.LibraryProperties.OVERRIDE_PARAMS
 class ItemWorkStage extends Stage {
 
   Boolean allowMinions = false
+  Boolean allowContainers = true
   Closure<Collection<JobItem>> itemFilter = { List<JobItem> items -> items }
 
   Closure itemExecution = { JobItem item -> }
@@ -111,7 +112,7 @@ class ItemWorkStage extends Stage {
       }
 
       // apply container
-      if (item.containerized) {
+      if (allowContainers && item.containerized) {
         Closure currentExecution = execution
         execution = { -> steps.utils.withContainer(item.dockerImage, currentExecution) }
       }
