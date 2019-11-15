@@ -69,6 +69,21 @@ void checkout(String id = 'checkout', String label = '') {
   ).run()
 }
 
+void branchProtect(String id = 'branch_protect', String label = 'Branch Protection') {
+  new ParallelItemWorkStage(id: id, label: label ?: id.capitalize(),
+    ignoreGroups: true,
+    itemFilter: { List<JobItem> items ->
+      items.findAll { JobItem item -> item.checkout }
+    },
+    itemExecution: { JobItem item ->
+      GitHubManager.registerBranchProtectionRule(item)
+    },
+    itemChunkInclusionCriteria: { List<JobItem> chunk, JobItem next ->
+      chunk.every { it.scmID != next.scmID }
+    }
+  ).run()
+}
+
 void version(String id = 'version', String label = '') {
   new SimpleStage(id: id, label: label ?: id.capitalize(),
     body: {

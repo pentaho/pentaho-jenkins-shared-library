@@ -21,7 +21,7 @@ class ReplacePropertyRule extends ExternalResource {
   }
 
   ReplacePropertyRule(Map<Class<?>, Map<String, Closure>> replacements) {
-    this.classes = replacements.keySet()
+    this.classes = new LinkedHashSet<>(replacements.keySet())
     this.replacements = replacements
   }
   /**

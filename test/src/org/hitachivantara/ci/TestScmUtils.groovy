@@ -63,6 +63,7 @@ class TestScmUtils extends BasePipelineSpecification {
       'refs/heads/feature1' || 'refs/heads/feature1' | 'refs/remotes/origin/feature1'
       'tags/tag1'           || 'refs/tags/tag1'      | 'refs/remotes/origin/tag1'
       '9f0f5d0'             || 'refs/heads/9f0f5d0'  | 'refs/remotes/origin/9f0f5d0'
+      'heads/qa/test'       || 'refs/heads/qa/test'  | 'refs/remotes/origin/qa/test'
   }
 
   def "test git Refspec is marked for update even if it isn’t a fast-forward"() {
@@ -89,6 +90,7 @@ class TestScmUtils extends BasePipelineSpecification {
       'heads/feature1'    || 'feature1'
       'tags/tag1'         || 'tag1'
       '9f0f5d0'           || '9f0f5d0'
+      'heads/qa/test'     || 'qa/test'
   }
 
   def "test is inside working tree"() {

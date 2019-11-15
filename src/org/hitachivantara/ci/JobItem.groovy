@@ -46,45 +46,46 @@ class JobItem implements Serializable {
 
   // User configurable properties
   private static final List configurable = [
-      'jobID',
-      'scmUrl',
-      'scmCacheUrl',
-      'scmBranch',
-      'scmRevision',
-      'scmCredentials',
-      'scmPoll',
-      'scmScanInterval',
-      'directives',
-      'testable',
-      'testsArchivePattern',
-      'buildFile',
-      'settingsFile',
-      'root',
-      'versionProperty',
-      'buildFramework',
-      'execType',
-      'archivable',
-      'parallelize',
-      'asynchronous',
-      'properties',
-      'targetJobName',
-      'passOnBuildParameters',
-      'atomicScmCheckout',
-      'securityScannable',
-      'dockerImage',
-      'script',
-      'prReportStatus',
-      'prDirectives',
-      'prScan',
-      'prMerge',
-      'prExecType',
-      'prStatusLabel',
-      'timeout',
-      'createRelease',
-      'previousReleaseTag',
-      'auditable',
-      'slackChannel',
-      'prSlackChannel'
+    'jobID',
+    'archivable',
+    'asynchronous',
+    'atomicScmCheckout',
+    'auditable',
+    'buildFile',
+    'buildFramework',
+    'createRelease',
+    'directives',
+    'dockerImage',
+    'execType',
+    'parallelize',
+    'passOnBuildParameters',
+    'prDirectives',
+    'previousReleaseTag',
+    'prExecType',
+    'prMerge',
+    'properties',
+    'prReportStatus',
+    'prScan',
+    'prSlackChannel',
+    'prStatusLabel',
+    'root',
+    'scmBranch',
+    'scmCacheUrl',
+    'scmCredentials',
+    'scmPoll',
+    'scmProtectBranch',
+    'scmRevision',
+    'scmScanInterval',
+    'scmUrl',
+    'script',
+    'securityScannable',
+    'settingsFile',
+    'slackChannel',
+    'targetJobName',
+    'testable',
+    'testsArchivePattern',
+    'timeout',
+    'versionProperty',
   ]
 
   JobItem(Map jobData, Map buildProperties = [:]) {
@@ -238,6 +239,10 @@ class JobItem implements Serializable {
 
   Boolean getScmPoll() {
     data.scmPoll
+  }
+
+  Boolean isScmProtectBranch() {
+    data.scmProtectBranch
   }
 
   String getScmCredentials() {
