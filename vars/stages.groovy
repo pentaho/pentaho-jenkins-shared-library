@@ -282,7 +282,9 @@ void tag(String id = 'tag', String label = '') {
       utils.tagItem(item, tagName, tagMessage)
 
       if (item.isCreateRelease()) {
-        GitHubManager.createRelease(item)
+        dir(item.checkoutDir) {
+          GitHubManager.createRelease(item)
+        }
       }
     }
   ).run()
