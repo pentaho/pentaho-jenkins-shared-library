@@ -28,6 +28,7 @@ import static org.hitachivantara.ci.JobItem.ExecutionType.NOOP
 import static org.hitachivantara.ci.build.BuildFramework.DSL_SCRIPT
 import static org.hitachivantara.ci.build.BuildFramework.JENKINS_JOB
 import static org.hitachivantara.ci.build.BuildFramework.MAVEN
+import static org.hitachivantara.ci.config.LibraryProperties.BUILD_PLAN_ID
 import static org.hitachivantara.ci.config.LibraryProperties.TAG_NAME
 
 class TestConfiguration extends BasePipelineSpecification {
@@ -682,6 +683,34 @@ class TestConfiguration extends BasePipelineSpecification {
       "date|yyyy-'rc'"    | '2019-rc'
       'date|HH.mm-325'    | '12.30-325'
       'tag-not-evaluated' | 'tag-not-evaluated'
+  }
+
+  def "test retrieving build data yaml from a remote location"() {
+    setup:
+    String testYaml = 'test/resources/thinBuildDataTestFile.yaml'
+    String fakeUrl = 'http://fake.url'
+    GroovySpy(URL, global: true, constructorArgs:[fakeUrl]) {
+      getText() >> new File(testYaml).text
+    }
+
+    when:
+    BuildData bd = new BuildDataBuilder()
+      .withEnvironment([
+        DEFAULT_BUILD_PROPERTIES: testYaml
+      ])
+      .withParams([
+        BUILD_DATA_FILE: fakeUrl
+      ])
+      .build()
+      List<JobItem> jobItems = bd.buildMap.values().flatten()
+    then:
+    noExceptionThrown()
+
+    and:
+    jobItems.size() == 7
+
+    and:
+    bd.buildProperties[BUILD_PLAN_ID] == 'Jibberish Build Test'
   }
 
 }

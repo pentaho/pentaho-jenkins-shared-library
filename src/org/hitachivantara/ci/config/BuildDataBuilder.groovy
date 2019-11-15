@@ -362,6 +362,15 @@ class BuildDataBuilder {
         // Try loading one that matches this job's name before anything else.
         String jobName = steps.utils.jobName()
         buildDataFile = "${jobName}.yaml"
+      } else {
+        try {
+          String remoteBuildData = new URL(buildDataFile).text
+          messages << { -> steps.log.info "Parsing data from remote location '${buildDataFile}'" }
+          return parseContent(remoteBuildData) as Map
+        } catch (MalformedURLException | UnknownHostException e) {
+          // it's not an URL or it's a URL for something that doesn't exist. Ignore and continue
+          messages << { -> steps.log.warn "'${BUILD_DATA_FILE}' does not refer to an URL!" }
+        }
       }
 
       String resultingPath = Paths.get(
