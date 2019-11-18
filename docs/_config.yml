@@ -1,0 +1,5 @@
+theme: jekyll-theme-cayman
+
+title: Pentaho Shared Library
+description: A Jenkins shared library to support the development and building process for Pentaho projects.
+show_downloads: true

@@ -1,18 +1,16 @@
-# Global Configuration Properties
+# Overriding Properties
+These properties allow a quick override of any configuration for the pipeline. These properties are applied over params even if they are defined in the job.
 
-Global build configuration properties and their usage. 
-See [default-properties.yaml](../../resources/default-properties.yaml) for a list of available property combinations. 
-
-### DEFAULT_BUILD_PROPERTIES
-Default location to look for an external configuration that overrides the default one. 
+### OVERRIDE_PARAMS
+This configuration is meant to be used as a job param allowing override of any property or param passed to the build. The values here will override even other params present on the pipeline. The properties specified should be in yaml format.
 
 ### OVERRIDE_JOB_PARAMS
-This configuration is meant to be used as a job param to provide the means to quickly override a job item configuration for the current build.
+This configuration, just like the OVERRIDE_PARAMS, is meant to be used as a job param to provide the means to quickly override a job item configuration for the current build.
 The provided value should be in a valid yaml format and all the job item properties are available for use.
 
 Some examples.
 
-##### Multi Item Entry
+#### Multi Item Entry
 Provide a list of job item entries.
 
 ```
@@ -31,7 +29,7 @@ or in an alternate yaml form that might be easier to write depending on how big 
 - {jobID: my-second-item-id, directives: test, scmBranch: my-branch}
 ```
 
-##### Single Item Entry
+#### Single Item Entry
 When specifying a single item, provide values as if you were specifying a job item directly.
 
 ```
@@ -39,7 +37,7 @@ jobID: my-item-id
 directives: clean install
 ```
 
-##### Omitting jobID 
+#### Omitting jobID 
 
 If the `jobID` field is not specified the overrides for that item will be applied to all job items. 
 
