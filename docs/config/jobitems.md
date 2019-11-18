@@ -1,7 +1,7 @@
 # Job Items
 A job item is what we call a build element that will be worked during a pipeline execution.
 
-## General Properties
+## Main Properties
 
 ### jobID
 A String mandatory id for the item.
@@ -31,8 +31,6 @@ directives:
 
 Each of the directives keys will have to be passed to the Builder so that it can identify the correct ones to use.
 
-**Default:** \<empty\> 
-
 ### testsArchivePattern
 Pattern to use when archiving tests to the job.
 
@@ -46,12 +44,8 @@ If this item is to run tests.
 ### root
 Root directory to work on relative to the root of the repository.
 
-**Default:** \<empty\>
-
 ### versionProperty
 Version property to use when replacing version properties on the build file.
-
-**Default:** \<empty\>
 
 ### buildFramework
 The build framework for this job item
@@ -85,12 +79,8 @@ Checkout this item to a unique directory in case more items share the same repo 
 ### dockerImage
 Docker image to use when running this item.
 
-**Default:** \<empty\>
-
 ### settingsFile
 Build framework settings file.
-
-**Default:** \<empty\>
 
 ### auditable
 If this item is to run code audit.
@@ -98,18 +88,13 @@ If this item is to run code audit.
 **Default:** false
 
 
-
 ## SCM Properties
 
 ### scmUrl
 Git Url to fetch the source code from. 
 
-**Default:** \<empty\>
-
 ### scmCacheUrl
 Git cache Url to fetch the source code from. 
-
-**Default:** \<empty\>
 
 ### scmBranch
 Branch to fetch the source code from. 
@@ -124,13 +109,10 @@ Commit to use when building.
 ### scmCredentials
 Jenkins credentials id to use when authenticating with git.
 
-**Default:** \<empty\>
-
 ### scmPoll
 Enable pooling for changes on this item.
 
 **Default:** true
-
 
 
 ## JENKINS_JOB Properties
@@ -143,12 +125,8 @@ Run this item asynchronously.
 ### properties
 Properties to pass to this item.
 
-**Default:** \<empty\>
-
 ### targetJobName
 Job name to trigger through this item.
-
-**Default:** \<empty\>
 
 ### passOnBuildParameters
 Pass current build parameters to the job being triggered by this item.
@@ -156,14 +134,10 @@ Pass current build parameters to the job being triggered by this item.
 **Default:** true
 
 
-
 ## DSL_SCRIPT Properties
 
 ### script
 Script to execute for this item.
-
-**Default:** \<empty\>
-
 
 
 ## Multibranch Properties
@@ -180,8 +154,6 @@ Report pull request build status to Github.
 
 ### prDirectives
 Build directives for pull requests.
-
-**Default:** \<empty\>
 
 ### prScan
 If pull requests are to be scanned for.
@@ -200,5 +172,3 @@ How to execute pull requests for this job item.
 
 ### prStatusLabel
 Description label from the build to show on github when reporting status for pull requests.
-
-**Default:** \<empty\>
