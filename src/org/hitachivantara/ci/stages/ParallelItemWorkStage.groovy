@@ -36,16 +36,16 @@ class ParallelItemWorkStage extends ItemWorkStage {
 
     buildData.buildMap.each { String itemGroup, List<JobItem> items ->
       List<JobItem> enabledItems = items.findAll { JobItem item -> !item.execNoop }
-      List<List<JobItem>> workableItemGroups = itemExpansion.call(itemFilter.call(enabledItems))
+      List<List<JobItem>> workableItemGroups = itemExpansion.call(itemFilter.call(enabledItems)).findAll { it }
+
+      String groupLabel = singleGroup ? label : "${label} ${itemGroup}"
 
       if (!workableItemGroups) {
-        steps.utils.createStageEmpty(label)
+        steps.utils.createStageEmpty(groupLabel)
         return
       }
 
       workableItemGroups.eachWithIndex { List<JobItem> workableItemGroup, int index ->
-        String groupLabel = singleGroup ? label : "${label} ${itemGroup}"
-
         if (workableItemGroups.size() > 1) {
           groupLabel += " (P${index + 1})"
         }
