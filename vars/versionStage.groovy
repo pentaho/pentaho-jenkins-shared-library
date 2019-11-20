@@ -56,11 +56,6 @@ void doVersioning(BuildData buildData) {
   // the pipeline was checked out, it will fail otherwise.
   // TODO: The version merger should be included into the jenkins plugin.
 
-  if (!buildData.getBool(RUN_BUILDS)) {
-    log.warn "RUN_BUILDS is false: No versioning performed."
-    return
-  }
-
   String versionsDir = buildData.getString(BUILD_CONFIG_ROOT_PATH)
 
   String versionsFilename = buildData.getString(BUILD_VERSIONS_FILE)
