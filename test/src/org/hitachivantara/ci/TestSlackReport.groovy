@@ -5,7 +5,9 @@
  */
 package org.hitachivantara.ci
 
+import hudson.EnvVars
 import hudson.model.AbstractBuild
+import hudson.model.TaskListener
 import hudson.tasks.junit.TestResultAction
 import org.hitachivantara.ci.jenkins.JobUtils
 import org.hitachivantara.ci.report.BuildStatus
@@ -18,6 +20,7 @@ import org.junit.Rule
 import org.junit.rules.RuleChain
 import spock.lang.Unroll
 
+import static org.hitachivantara.ci.config.LibraryProperties.STAGE_LABEL_COLLECT_JOB_DATA
 import static org.hitachivantara.ci.config.LibraryProperties.STAGE_LABEL_UNIT_TEST
 import static org.hitachivantara.ci.config.LibraryProperties.STAGE_NAME
 
@@ -379,4 +382,68 @@ class TestSlackReport extends BasePipelineSpecification {
         ['']
       ]
   }
+
+  def "test job data status info"() {
+    setup:
+    mockScript.binding.setVariable('currentBuild', GroovyMock(RunWrapper) {
+      getRawBuild() >> GroovyMock(AbstractBuild) {
+        getEnvironment(_) >> { TaskListener listener ->
+          EnvVars envVars = new EnvVars(['JENKINS_URL': 'http://dummies.org'])
+          return envVars
+        }
+      }
+    })
+
+    SlackReport report = new SlackReport(mockScript)
+    configRule.buildData([
+      BUILD_DATA_FILE  : 'buildDataSample.yaml',
+      SLACK_INTEGRATION: true
+    ])
+
+    Map branchStatus = [
+      (BuildStatus.Level.BRANCH_STATUS):
+        [(STAGE_LABEL_COLLECT_JOB_DATA): [(BuildStatus.Category.GENERAL): branchStatusData as Map]]
+    ]
+
+    configRule.buildStatus = new BuildStatus(buildStatus: branchStatus)
+
+    when:
+    report.build(configRule.buildData)
+
+    then:
+    report.attachments[0].fields == expectedFields
+
+    and:
+    report.attachments[0].pretext == expectedPretext
+
+    and:
+    report.attachments[0].color == expectedColor
+
+    where:
+    branchStatusData << [
+      [
+        'master':
+          [
+            'status'       : 'ABORTED',
+            'pull-requests':
+              ['Success': 1, 'Failure': 1],
+            'jobs'         :
+              ['Success': 1, 'Aborted': 2], 'failing-tests': 30
+          ]
+      ]
+    ]
+
+    expectedFields <<
+      [
+        [
+          [title: 'Status', value: ':fearful: ABORTED', short: true],
+          [title: 'Failing tests', value: ':-1: 30', short: true],
+          [title: 'Open pull requests :open_pr:', value: '- Success: 1\n- Failure: 1', short: true]
+        ]
+      ]
+
+    expectedPretext = '<http://dummies.org|master branch health check>'
+    expectedColor = '#838282'
+  }
+
 }

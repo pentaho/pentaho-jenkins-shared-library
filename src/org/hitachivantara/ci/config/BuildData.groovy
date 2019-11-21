@@ -228,6 +228,10 @@ class BuildData implements Serializable {
     buildStatus.release(stage, data)
   }
 
+  void branchStatus(String stage = buildProperties[STAGE_NAME], data) {
+    buildStatus.branchStatus(stage, data)
+  }
+
   /*********************/
   /*** Other methods ***/
   /*********************/
