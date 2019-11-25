@@ -5,7 +5,7 @@ The **Build File** defines what will built and any specific configuration needed
 This property defines the path to a folder in the workspace where the build files can be found.
 
 ## BUILD_DATA_FILE
-The file name for the build file that will be looked for inside the build data folder.
+The property that will specify which yaml structure will be used to drive the build. If a filename alone, then the build file that will be looked for inside the build data folder. If an URL with a remote file location, then this yaml structure will be downloaded and used locally.
 
 # Structure
 The build file has 3 major components.
