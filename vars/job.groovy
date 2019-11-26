@@ -9,10 +9,12 @@ import hudson.model.Job
 import hudson.model.Result
 import org.hitachivantara.ci.JobItem
 import org.hitachivantara.ci.config.BuildData
-import org.hitachivantara.ci.jenkins.JobException
 import org.hitachivantara.ci.jenkins.JobBuild
+import org.hitachivantara.ci.jenkins.JobException
 import org.hitachivantara.ci.jenkins.JobUtils
 import org.jenkinsci.plugins.pipeline.utility.steps.shaded.org.yaml.snakeyaml.Yaml
+import org.jenkinsci.plugins.workflow.actions.WarningAction
+import org.jenkinsci.plugins.workflow.graph.FlowNode
 
 import static org.hitachivantara.ci.config.LibraryProperties.IS_MINION
 import static org.hitachivantara.ci.config.LibraryProperties.IS_MULTIBRANCH_MINION
@@ -94,8 +96,9 @@ List toParameters(Map properties, boolean forConfig = false) {
  * @param run
  * @param result
  */
-void setBuildResult(result) {
+void setBuildResult(Object result) {
   currentBuild.result = String.valueOf(result)
+  setStageResult(result)
 }
 
 /**
@@ -104,6 +107,17 @@ void setBuildResult(result) {
  */
 void setBuildUnstable() {
   setBuildResult(Result.UNSTABLE)
+}
+
+void setStageResult(Object result) {
+  FlowNode f = getContext(FlowNode.class)
+  if (f != null) {
+    // getContext is a new step, we want to mark the immediate previous one
+    f.addOrReplaceAction(new WarningAction(Result.fromString(String.valueOf(result))))
+    f.parents.each {
+      it.addOrReplaceAction(new WarningAction(Result.fromString(String.valueOf(result))))
+    }
+  }
 }
 
 /**
