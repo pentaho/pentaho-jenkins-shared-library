@@ -14,6 +14,7 @@ import org.hitachivantara.ci.archive.ArchivingHelper
 import org.hitachivantara.ci.build.BuilderFactory
 import org.hitachivantara.ci.build.helper.BuilderUtils
 import org.hitachivantara.ci.config.BuildData
+import org.hitachivantara.ci.jenkins.JobUtils
 import org.hitachivantara.ci.stages.ConfigStage
 import org.hitachivantara.ci.stages.ParallelItemWorkStage
 import org.hitachivantara.ci.stages.SimpleStage
@@ -26,6 +27,8 @@ import static org.hitachivantara.ci.config.LibraryProperties.CLEAN_ALL_CACHES
 import static org.hitachivantara.ci.config.LibraryProperties.CLEAN_BUILD_WORKSPACE
 import static org.hitachivantara.ci.config.LibraryProperties.CLEAN_CACHES_REGEX
 import static org.hitachivantara.ci.config.LibraryProperties.CLEAN_SCM_WORKSPACES
+import static org.hitachivantara.ci.config.LibraryProperties.STAGE_LABEL_COLLECT_JOB_DATA
+import static org.hitachivantara.ci.config.LibraryProperties.STAGE_LABEL_REPORT
 import static org.hitachivantara.ci.config.LibraryProperties.TAG_MESSAGE
 import static org.hitachivantara.ci.config.LibraryProperties.TAG_NAME
 
@@ -250,9 +253,9 @@ void cleanup(String label = 'Cleanup') {
     },
     isRun: {
       buildData.getBool(CLEAN_BUILD_WORKSPACE) ||
-      buildData.isSet(CLEAN_CACHES_REGEX) ||
-      buildData.getBool(CLEAN_ALL_CACHES) ||
-      buildData.getBool(CLEAN_SCM_WORKSPACES)
+        buildData.isSet(CLEAN_CACHES_REGEX) ||
+        buildData.getBool(CLEAN_ALL_CACHES) ||
+        buildData.getBool(CLEAN_SCM_WORKSPACES)
     }
   ).run()
 }
@@ -307,12 +310,24 @@ void sonar(String id = 'sonar', String label = '') {
 }
 
 void report() {
-  new SimpleStage(id: 'report', label: 'Report',
+  new SimpleStage(id: 'report', label: STAGE_LABEL_REPORT,
     body: {
       reportStage.doReport(buildData)
     },
     onError: { Throwable e ->
       log.warn "Could not generate report: ${e.message}", e
     }
+  ).run()
+}
+
+void collectJobData() {
+  new SimpleStage(id: 'collectJobData', label: STAGE_LABEL_COLLECT_JOB_DATA,
+    body: {
+      JobUtils.collectJobData()
+    },
+    onError:
+      { Throwable e ->
+        log.warn "Could not collect job data: ${e.message}", e
+      }
   ).run()
 }

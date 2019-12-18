@@ -5,22 +5,35 @@
  */
 package org.hitachivantara.ci.jenkins
 
+
 import hudson.model.ItemGroup
 import hudson.model.Item
 import hudson.model.Job
 import hudson.model.Run
+import hudson.model.TaskListener
+import hudson.tasks.junit.TestResultAction
 import hudson.triggers.SCMTrigger
 import jenkins.model.Jenkins
+import jenkins.scm.api.SCMHead
+import org.hitachivantara.ci.JobItem
+import org.hitachivantara.ci.PrettyPrinter
 import org.hitachivantara.ci.config.BuildData
+import org.jenkinsci.plugins.github_branch_source.PullRequestSCMHead
+import org.jenkinsci.plugins.workflow.cps.CpsScript
 import org.jenkinsci.plugins.workflow.job.WorkflowJob
 import org.jenkinsci.plugins.workflow.support.steps.build.RunWrapper
 import org.jenkinsci.plugins.workflow.libs.LibrariesAction
 import org.jenkinsci.plugins.workflow.libs.LibraryRecord
 
+import static org.hitachivantara.ci.config.LibraryProperties.CHANGE_ID
 import static org.hitachivantara.ci.config.LibraryProperties.IS_MINION
 import static org.hitachivantara.ci.config.LibraryProperties.POLL_CRON_INTERVAL
 
 class JobUtils {
+
+  static Script getSteps() {
+    ({} as CpsScript)
+  }
 
   /**
    * Get the last build of the job with the given name
@@ -28,7 +41,15 @@ class JobUtils {
    * @return
    */
   static RunWrapper getLastBuildJob(String jobName) {
-    Job job = Jenkins.get().getItemByFullName(jobName, Job.class)
+    return getLastBuildJob(Jenkins.get().getItemByFullName(jobName, Job.class))
+  }
+
+  /**
+   * Get the last build of the given job
+   * @param job
+   * @return
+   */
+  static RunWrapper getLastBuildJob(Job job) {
     Run run = job?.getLastBuild()
     if (run) {
       return new RunWrapper(run, false)
@@ -57,7 +78,7 @@ class JobUtils {
   static List getLoadedLibraries(RunWrapper build) {
     LibrariesAction action = build.rawBuild.getAction(LibrariesAction.class)
 
-    if(action){
+    if (action) {
       return action.libraries.collect { LibraryRecord library ->
         "${library.name}@${library.version}"
       }
@@ -93,12 +114,83 @@ class JobUtils {
    * @param name
    * @return
    */
-  static Job findJobByName(String name){
+  static Job findJobByName(String name) {
     Item job = Jenkins.get().getItemByFullName(name)
-    if(job && job instanceof Job){
+    if (job && job instanceof Job) {
       return job
     } else {
       return null
     }
   }
+
+  /**
+   * Entry point to collect data from the multibranch jobs
+   */
+  static void collectJobData() {
+    BuildData buildData = BuildData.instance
+    List<JobItem> allJobItems = buildData.buildMap.collectMany { String key, List<JobItem> value -> value }
+    Map<String, Map> data = [:]
+    TaskListener taskListener = steps.getContext(TaskListener.class) as TaskListener
+
+    allJobItems.each { JobItem jobItem ->
+      ItemGroup folder = getFolder("${MinionHandler.getRootFolderPath()}/${jobItem.jobID}")
+
+      folder.allItems().each { Item item ->
+        RunWrapper latestBuild = getLastBuildJob(item as Job)
+        String branch = item.name
+
+        String branchStatus
+        if ( latestBuild.result ){
+          branchStatus = latestBuild.result as String
+        }
+
+        if (latestBuild.rawBuild.getEnvironment(taskListener).get(CHANGE_ID)) {
+          // when pull requests
+          PullRequestSCMHead head = (PullRequestSCMHead) SCMHead.HeadByItem.findHead(item)
+          if (head) {
+            addBranchResult(data, head.target.name, branchStatus, 'pull-requests')
+          }
+        } else { // base branch
+          Map branchData = data.get(branch, [:]) as Map
+          branchStatus = branchData.get('status', branchStatus)
+
+          if (branchStatus != null && latestBuild != null && latestBuild.resultIsWorseOrEqualTo(branchStatus)) {
+            branchStatus = latestBuild.result as String
+          }
+
+          addBranchResult(data, branch, branchStatus, 'jobs')
+          if ( branchStatus ) {
+            branchData.put('status', branchStatus)
+          }
+
+          TestResultAction testAction = latestBuild?.rawBuild?.getAction(TestResultAction.class)
+          if (testAction != null) {
+            branchData['failing-tests'] = testAction.failCount +
+              (branchData['failing-tests'] ? Integer.valueOf(branchData['failing-tests']) : 0)
+          }
+        }
+      }
+    }
+    steps.log.debug new PrettyPrinter(data).toPrettyPrint()
+    buildData.branchStatus(data)
+  }
+
+  /**
+   * Auxiliary method to manage counters by build status
+   * @param data
+   * @param branch
+   * @param branchStatus
+   * @param key
+   */
+  private static void addBranchResult(Map data, String branch, String branchStatus, String key) {
+    Map branchData = data.get(branch, [:])
+    Map results = branchData.get(key, [:])
+    if ( !branchStatus ) {
+      branchStatus = 'Not Built / Building'
+    }
+    branchStatus = branchStatus.toLowerCase().capitalize()
+    results.put(branchStatus, results.get(branchStatus, 0) + 1)
+    branchData.put(key, results)
+  }
+
 }

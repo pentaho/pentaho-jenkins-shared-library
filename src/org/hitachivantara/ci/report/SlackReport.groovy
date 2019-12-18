@@ -6,6 +6,7 @@
 package org.hitachivantara.ci.report
 
 import groovy.json.JsonOutput
+import hudson.model.TaskListener
 import hudson.tasks.junit.TestResultAction
 import org.hitachivantara.ci.JobItem
 import org.hitachivantara.ci.ScmUtils
@@ -68,25 +69,28 @@ class SlackReport implements Report {
     }
 
     BuildStatus buildStatus = buildData.buildStatus
-    attachments << buildMainAttach()
 
-    if (buildStatus.hasErrors()) {
-      attachments << buildStatusAttach(':no_entry: *Errors*', colors.REPORT_ERRORS, buildStatus.errors)
-    }
-    if (buildStatus.hasWarnings()) {
-      attachments << buildStatusAttach(':warning: *Warnings*', colors.REPORT_WARNINGS, buildStatus.warnings)
-    }
-    if (buildStatus.hasReleases()) {
-      attachments << buildStatusReleasesAttach(buildStatus.releases)
-    }
+    if ( buildStatus.hasBranchStatus() ){
+      attachments = buildBranchStatusAttach(buildStatus)
+    } else {
+      attachments << buildMainAttach()
 
+      if (buildStatus.hasErrors()) {
+        attachments << buildStatusAttach(':no_entry: *Errors*', colors.REPORT_ERRORS, buildStatus.errors)
+      }
+      if (buildStatus.hasWarnings()) {
+        attachments << buildStatusAttach(':warning: *Warnings*', colors.REPORT_WARNINGS, buildStatus.warnings)
+      }
+      if (buildStatus.hasReleases()) {
+        attachments << buildStatusReleasesAttach(buildStatus.releases)
+      }
+    }
     return this
   }
 
   void send() {
     if (buildData.getBool(SLACK_INTEGRATION)) {
       String channels
-
        switch (buildData.get(SLACK_CHANNEL)) {
         case String:  // default list of channels configured
           channels = buildData.getString(SLACK_CHANNEL)
@@ -110,6 +114,51 @@ class SlackReport implements Report {
           attachments: JsonOutput.toJson(attachments)
       )
     }
+  }
+
+  private List buildBranchStatusAttach(BuildStatus buildStatus) {
+    RunWrapper build = dsl.currentBuild
+    String hostUrl = build.rawBuild.getEnvironment(dsl.getContext(TaskListener.class) as TaskListener).get('JENKINS_URL')
+    List branchesStatus = []
+    Map branchesData = buildStatus.branchStatus.collectEntries { String stage, Map items -> items }.values().flatten().first() as Map
+    branchesData.keySet().each { String branch ->
+      Map branchData = branchesData[branch]
+
+      String buildLabel = "${branch} branch health check"
+      String buildTitle = "<${hostUrl}|${buildLabel}>"
+      String color = colors['BUILD_' + branchData['status']]
+
+      List fields = []
+
+      String buildEmoji = emojis['BUILD_' + branchData['status']]
+      String buildStatusValue = "${buildEmoji} ${branchData['status']}"
+      String failingTestsValue = "${(branchData['failing-tests'] > 0 ? ':-1:' : ':+1:')} ${branchData['failing-tests']}"
+
+      fields << [
+        title: 'Status',
+        value: buildStatusValue,
+        short: true
+      ]
+
+      fields << [
+        title: 'Failing tests',
+        value: failingTestsValue,
+        short: true
+      ]
+
+      fields << [
+        title: 'Open pull requests :open_pr:',
+        value: (branchData['pull-requests'] as Map).collect { "- ${it.key}: ${it.value}" }.join('\n'),
+        short: true
+      ]
+
+      branchesStatus << [
+        pretext    : buildTitle,
+        color      : color,
+        fields     : fields
+      ]
+    }
+    return branchesStatus
   }
 
   private Map buildMainAttach() {

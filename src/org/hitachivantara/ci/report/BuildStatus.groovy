@@ -8,7 +8,7 @@ package org.hitachivantara.ci.report
 class BuildStatus implements Serializable {
 
   enum Level {
-    ERRORS, WARNINGS, TIMINGS, RELEASES
+    ERRORS, WARNINGS, TIMINGS, RELEASES, BRANCH_STATUS
   }
 
   enum Category {
@@ -45,6 +45,9 @@ class BuildStatus implements Serializable {
     store(stage, Level.RELEASES, data)
   }
 
+  void branchStatus(String stage, data) {
+    store(stage, Level.BRANCH_STATUS, data)
+  }
   //sonar claims, but synchronized blocks is unsupported for CPS transformation
   private synchronized void store(String stage, Level level, item, data) {
     buildStatus
@@ -79,6 +82,10 @@ class BuildStatus implements Serializable {
     buildStatus.get(Level.RELEASES) != null
   }
 
+  Boolean hasBranchStatus() {
+    buildStatus.get(Level.BRANCH_STATUS) != null
+  }
+
   Map getErrors() {
     buildStatus.get(Level.ERRORS)
   }
@@ -93,6 +100,10 @@ class BuildStatus implements Serializable {
 
   Map getReleases() {
     buildStatus.get(Level.RELEASES)
+  }
+
+  Map getBranchStatus() {
+    buildStatus.get(Level.BRANCH_STATUS)
   }
 
   Long getStageDuration(String stage) {

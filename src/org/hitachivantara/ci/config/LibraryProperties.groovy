@@ -153,6 +153,7 @@ class LibraryProperties implements Serializable {
   public static final String STAGE_LABEL_REPORT = 'Report'
   public static final String STAGE_LABEL_PRE_BUILD = 'Pre Build'
   public static final String STAGE_LABEL_POST_BUILD = 'Post Build'
+  public static final String STAGE_LABEL_COLLECT_JOB_DATA = 'Collect Job Data'
 
   //*******************
   //** Pull Requests **
