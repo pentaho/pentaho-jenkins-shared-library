@@ -219,6 +219,8 @@ class LibraryProperties implements Serializable {
   public static final String MINIONS_FOLDER = 'MINIONS_FOLDER'
   public static final String MINION_POLL_CRON_INTERVAL = 'MINION_POLL_CRON_INTERVAL'
   public static final String MINION_LOGS_TO_KEEP = 'MINION_LOGS_TO_KEEP'
+
   public static final String LOGS_TO_KEEP = 'LOGS_TO_KEEP'
   public static final String ARTIFACTS_TO_KEEP = 'ARTIFACTS_TO_KEEP'
+  public static final String DISABLE_CONCURRENT_BUILDS = 'DISABLE_CONCURRENT_BUILDS'
 }

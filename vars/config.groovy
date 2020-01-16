@@ -14,6 +14,7 @@ import org.jenkinsci.plugins.workflow.job.WorkflowJob
 import static org.hitachivantara.ci.config.LibraryProperties.BUILD_RETRIES
 import static org.hitachivantara.ci.config.LibraryProperties.ARTIFACTS_TO_KEEP
 import static org.hitachivantara.ci.config.LibraryProperties.BUILD_PLAN_ID
+import static org.hitachivantara.ci.config.LibraryProperties.DISABLE_CONCURRENT_BUILDS
 import static org.hitachivantara.ci.config.LibraryProperties.LOGS_TO_KEEP
 import static org.hitachivantara.ci.config.LibraryProperties.STAGE_LABEL_CONFIGURE
 
@@ -82,19 +83,24 @@ void applyToJob(Map defaultParams = [:]) {
   BuildData buildData = BuildData.instance
   JobUtils.managePollTrigger(getContext(WorkflowJob.class))
 
-  List jobConfig = [
-    disableConcurrentBuilds(),
-    buildDiscarder(
+  List jobConfig = []
+
+  if (buildData.getBool(DISABLE_CONCURRENT_BUILDS)) {
+    jobConfig << disableConcurrentBuilds()
+  }
+  if (buildData.isSet(LOGS_TO_KEEP) || buildData.isSet(ARTIFACTS_TO_KEEP)) {
+    jobConfig << buildDiscarder(
       logRotator(
         numToKeepStr: buildData.getString(LOGS_TO_KEEP),
         artifactNumToKeepStr: buildData.getString(ARTIFACTS_TO_KEEP)
       )
     )
-  ]
-
-  if(defaultParams){
+  }
+  if (defaultParams) {
     jobConfig << parameters(job.toParameters(defaultParams, true))
   }
 
-  properties(jobConfig)
+  if (jobConfig) {
+    properties(jobConfig)
+  }
 }
