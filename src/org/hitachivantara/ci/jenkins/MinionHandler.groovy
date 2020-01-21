@@ -23,6 +23,7 @@ import static org.hitachivantara.ci.config.LibraryProperties.BUILD_NUMBER
 import static org.hitachivantara.ci.config.LibraryProperties.BUILD_PLAN_ID
 import static org.hitachivantara.ci.config.LibraryProperties.CHANGE_ID
 import static org.hitachivantara.ci.config.LibraryProperties.CHANGE_TARGET
+import static org.hitachivantara.ci.config.LibraryProperties.DISABLE_CONCURRENT_BUILDS
 import static org.hitachivantara.ci.config.LibraryProperties.FIRST_JOB
 import static org.hitachivantara.ci.config.LibraryProperties.IGNORE_PIPELINE_FAILURE
 import static org.hitachivantara.ci.config.LibraryProperties.IS_MINION
@@ -237,6 +238,7 @@ class MinionHandler {
     }
 
     buildProperties.put(BUILD_PLAN_ID, jobItem.jobID)
+    buildProperties.put(DISABLE_CONCURRENT_BUILDS, true)
     buildProperties.put(USE_MINION_JOBS, false)
     buildProperties.put(USE_MINION_MULTIBRANCH_JOBS, false)
     buildProperties.put(IS_MINION, true)
