@@ -251,7 +251,17 @@ class ScmUtils implements Serializable {
     String previousCommit
 
     if (BuildData.instance.isPullRequest()) {
-      previousCommit = getBranchName(BuildData.instance.getString(CHANGE_TARGET))
+      String targetBranch = BuildData.instance.getString(CHANGE_TARGET)
+      previousCommit = getBranchName(targetBranch)
+      // Check if target exists locally, if not, fetch it
+      // we need that to calculate what changed
+      String ref = getLocalRefSpecPattern(targetBranch)
+      if (process("git show-ref -q ${ref}", steps, false) != 0) {
+        steps.log.info "Target branch refs not found, fetching now."
+        if (process("git fetch --no-tags --force origin -- ${targetBranch}:${ref}", steps, false) != 0) {
+          steps.log.warn "Couldn't fetch ${previousCommit}, only last commit will be used for what changed."
+        }
+      }
     } else {
       RunWrapper lastBuild = lastBuildWithResult(Result.FAILURE, build)
       previousCommit = getLastCommitHash(lastBuild, gitBranch, gitUrl)
