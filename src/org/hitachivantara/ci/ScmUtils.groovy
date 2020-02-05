@@ -258,8 +258,11 @@ class ScmUtils implements Serializable {
       String ref = getLocalRefSpecPattern(targetBranch)
       if (process("git show-ref -q ${ref}", steps, false) != 0) {
         steps.log.info "Target branch refs not found, fetching now."
-        if (process("git fetch --no-tags --force origin -- ${targetBranch}:${ref}", steps, false) != 0) {
-          steps.log.warn "Couldn't fetch ${previousCommit}, only last commit will be used for what changed."
+        Map scmInfo = jobItem.scmInfo + [credentials: jobItem.scmCredentials]
+        steps.utils.withGit(scmInfo) { String bearerGitUrl ->
+          if (process("git fetch --no-tags --force -- ${bearerGitUrl} ${targetBranch}:${ref}", steps, false) != 0) {
+            steps.log.warn "Couldn't fetch ${previousCommit}, only last commit will be used for what changed."
+          }
         }
       }
     } else {
