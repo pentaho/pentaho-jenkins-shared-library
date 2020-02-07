@@ -35,6 +35,9 @@ import static org.hitachivantara.ci.config.LibraryProperties.JENKINS_JDK_FOR_BUI
 import static org.hitachivantara.ci.config.LibraryProperties.LIB_CACHE_ROOT_PATH
 import static org.hitachivantara.ci.config.LibraryProperties.MAVEN_TEST_OPTS
 import static org.hitachivantara.ci.config.LibraryProperties.PR_STATUS_REPORTS
+import static org.hitachivantara.ci.config.LibraryProperties.DOCKER_RESOLVE_REPO
+import static org.hitachivantara.ci.config.LibraryProperties.DOCKER_PUBLIC_PUSH_REPO
+import static org.hitachivantara.ci.config.LibraryProperties.DOCKER_PRIVATE_PUSH_REPO
 
 class MavenBuilder extends AbstractBuilder implements IBuilder, Serializable {
 
@@ -294,6 +297,9 @@ class MavenBuilder extends AbstractBuilder implements IBuilder, Serializable {
           "PUBLIC_SNAPSHOT_REPO_URL=${publicSnapshotRepo}",
           "PRIVATE_RELEASE_REPO_URL=${privateReleaseRepo}",
           "PRIVATE_SNAPSHOT_REPO_URL=${privateSnapshotRepo}",
+          "DOCKER_PULL_HOST=${buildData.getString(DOCKER_RESOLVE_REPO)}",
+          "DOCKER_PUBLIC_PUSH_HOST=${buildData.getString(DOCKER_PUBLIC_PUSH_REPO)}",
+          "DOCKER_PRIVATE_PUSH_HOST=${buildData.getString(DOCKER_PRIVATE_PUSH_REPO)}",
           "MAVEN_OPTS=${mavenOpts}"
         ]) {
           steps.withCredentials([steps.usernamePassword(credentialsId: deployCredentials,

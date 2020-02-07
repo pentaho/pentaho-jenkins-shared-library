@@ -112,6 +112,9 @@ class LibraryProperties implements Serializable {
   //**********************************
   public static final String DOCKER_IMAGE_HOST = 'DOCKER_IMAGE_HOST'
   public static final String DOCKER_REGISTRY_URL = 'DOCKER_REGISTRY_URL'
+  public static final String DOCKER_RESOLVE_REPO = 'DOCKER_RESOLVE_REPO'
+  public static final String DOCKER_PUBLIC_PUSH_REPO = 'DOCKER_PUBLIC_PUSH_REPO'
+  public static final String DOCKER_PRIVATE_PUSH_REPO = 'DOCKER_PRIVATE_PUSH_REPO'
 
 
   //******************
