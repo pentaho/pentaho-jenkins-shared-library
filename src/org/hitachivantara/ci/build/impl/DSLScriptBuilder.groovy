@@ -33,13 +33,13 @@ class DSLScriptBuilder extends AbstractBuilder implements IBuilder, Serializable
 
   @Override
   Closure getExecution() {
-    getBuildClosure(jobItem)
+    getBuildClosure(item)
   }
 
   @Override
   void setBuilderData(Map builderData) {
-    this.buildData = builderData.buildData
-    this.dsl = builderData.dsl
+    this.buildData = builderData['buildData']
+    this.steps = builderData['dsl']
   }
 
   @Override
@@ -49,14 +49,14 @@ class DSLScriptBuilder extends AbstractBuilder implements IBuilder, Serializable
       String dslScript = jobItem.script
 
       if (FileUtils.exists(dslScript)) {
-        dslScript = dsl.readFile(file: dslScript, encoding: 'UTF-8') as String
+        dslScript = steps.readFile(file: dslScript, encoding: 'UTF-8') as String
       }
 
       dslScript = dslScript.replace('$\\{', '${')
 
-      dsl.log.debug 'Executing:', dslScript
+      steps.log.debug 'Executing:', dslScript
 
-      RunWrapper build = dsl.currentBuild as RunWrapper
+      RunWrapper build = steps.currentBuild as RunWrapper
       WorkflowRun raw = build.getRawBuild() as WorkflowRun
       CpsFlowExecution execution = raw.getExecution() as CpsFlowExecution
 
