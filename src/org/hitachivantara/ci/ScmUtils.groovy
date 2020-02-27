@@ -61,6 +61,8 @@ class ScmUtils implements Serializable {
   static final Pattern GIT_REF = Pattern.compile("^(refs/[^/]+)/(.+)")
   static final Pattern GIT_REFTAG = Pattern.compile("^(refs/tags/[^/]+)(.*)")
 
+  static final BuildData buildData = BuildData.instance
+
   static protected String getRefSpec(JobItem jobItem) {
     String refspecs
     String src = getRemoteRefSpecPattern(jobItem.scmBranch)
@@ -81,7 +83,7 @@ class ScmUtils implements Serializable {
       // branchName is refs/(heads|tags|whatever)/branch
       return branchName
     }
-    if (branchName.contains('/')) {
+    if (branchName =~ '(heads|tags|pull)/.+') {
       //head is remote/branchName, also ambiguous, but complement with refs/
       return "refs/$branchName"
     }
@@ -137,7 +139,7 @@ class ScmUtils implements Serializable {
    * @return
    */
   static Map doCheckout(Script steps, JobItem jobItem, boolean poll) {
-    BuildData.instance.isPullRequest() ? checkoutPR(steps) : checkoutBranch(steps, jobItem, poll)
+    buildData.isMultibranch() ? checkoutMultibranch(steps) : checkout(steps, jobItem, poll)
 
     /*
      * Note: The result of checkout can't be trusted!
@@ -167,9 +169,7 @@ class ScmUtils implements Serializable {
    * @param poll
    * @return
    */
-  static private void checkoutBranch(Script steps, JobItem jobItem, boolean poll) {
-    BuildData buildData = BuildData.instance
-
+  static private void checkout(Script steps, JobItem jobItem, boolean poll) {
     int timeout = buildData.getInt(CHECKOUT_TIMEOUT_MINUTES)
     int depth = buildData.getInt(CHECKOUT_DEPTH)
     boolean shallow = buildData.getBool(SHALLOW_CLONE) && !jobItem.isCreateRelease()
@@ -216,14 +216,14 @@ class ScmUtils implements Serializable {
   }
 
   /**
-   * Checks out a Pull Request using the scm configuration on the job
+   * Checks out a Branch or Pull Request using the scm configuration on the job
    * @param steps
    * @return
    */
-  static private void checkoutPR(Script steps) {
+  static private void checkoutMultibranch(Script steps) {
     Job job = steps.getContext(Job.class)
 
-    if (!prSourceExists(job)) {
+    if (buildData.isPullRequest() && !prSourceExists(job)) {
       throw new ScmException('Pull request build was aborted: Source fork/repository no longer exists! Please consider closing it.')
     }
 
@@ -250,8 +250,8 @@ class ScmUtils implements Serializable {
     RunWrapper build = findSCMData(steps, steps.currentBuild, jobItem)
     String previousCommit
 
-    if (BuildData.instance.isPullRequest()) {
-      String targetBranch = BuildData.instance.getString(CHANGE_TARGET)
+    if (buildData.isPullRequest()) {
+      String targetBranch = buildData.getString(CHANGE_TARGET)
       previousCommit = getBranchName(targetBranch)
       // Check if target exists locally, if not, fetch it
       // we need that to calculate what changed
@@ -360,8 +360,8 @@ class ScmUtils implements Serializable {
   static String getLastCommitHash(RunWrapper build, String branch, String url) {
     if (!build) return null
     List<SCMData> actions = build.rawBuild.getActions(SCMData.class)
-    SCMData buildData = actions?.find { it.scmUrl == url && it.branch == branch }
-    return buildData?.commitId
+    SCMData scmData = actions?.find { it.scmUrl == url && it.branch == branch }
+    return scmData?.commitId
   }
 
   static List<String> getChangesBetween(RunWrapper build, RunWrapper end, List<String> commits) {
@@ -410,7 +410,7 @@ class ScmUtils implements Serializable {
     // check if we are in a git folder
     isInsideWorkTree(steps)
 
-    if (BuildData.instance.isPullRequest()) {
+    if (buildData.isPullRequest()) {
       return calculatePrChanges(steps, jobItem)
     }
     return calculateJenkinsChanges(steps, jobItem)
@@ -434,7 +434,7 @@ class ScmUtils implements Serializable {
     // find the latest successful build and get the change list
     RunWrapper build = findSCMData(steps, steps.currentBuild, jobItem)
 
-    Result result = Result.fromString(BuildData.instance.getString(CHANGES_FROM_LAST)) // Reverts to FAILURE
+    Result result = Result.fromString(buildData.getString(CHANGES_FROM_LAST)) // Reverts to FAILURE
     RunWrapper lastBuild = lastBuildWithResult(result, build)
     if (!lastBuild) return null
 
@@ -528,7 +528,7 @@ class ScmUtils implements Serializable {
    * @return
    */
   static RunWrapper findSCMData(Script steps, RunWrapper currentBuild, JobItem jobItem) {
-    if (BuildData.instance.useMinions) {
+    if (buildData.useMinions) {
       RunWrapper run = JobUtils.getLastBuildJob(MinionHandler.getFullJobName(jobItem))
       if (!run) {
         steps.log.warn """\

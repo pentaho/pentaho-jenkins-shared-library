@@ -44,6 +44,7 @@ class StringUtils implements Serializable {
       '#' : DEFAULT_REPLACER,
   ]
 
+  @NonCPS
   static String normalizeString(String orig) {
     String str = orig
     str = stripDiacritics(str)
@@ -51,10 +52,12 @@ class StringUtils implements Serializable {
     return str
   }
 
+  @NonCPS
   static String stripDiacritics(String str) {
     return DIACRITICALMARKS.matcher(Normalizer.normalize(str, Normalizer.Form.NFD)).replaceAll('')
   }
 
+  @NonCPS
   static String stripNonDiacritics(String orig) {
     StringBuffer sb = ''<<''
     orig.each { c ->
@@ -63,6 +66,7 @@ class StringUtils implements Serializable {
     return sb.toString()
   }
 
+  @NonCPS
   static String truncate(String str, int size) {
     return str.size() > size ? str.take(size) + '...' : str
   }
@@ -72,10 +76,12 @@ class StringUtils implements Serializable {
  * @param duration the number of milliseconds
  * @return
  */
+  @NonCPS
   static String formatDuration(Long duration) {
     new PrettyPrinter(Duration.ofMillis(duration)).toPrettyPrint()
   }
 
+  @NonCPS
   static StringBuilder replaceAll(StringBuilder self, Pattern pattern, String replacement) {
     Matcher m = pattern.matcher(self)
     int index = 0
@@ -86,14 +92,17 @@ class StringUtils implements Serializable {
     return self
   }
 
+  @NonCPS
   static String fixNull(Object s) {
     s ? String.valueOf(s) : ''
   }
 
+  @NonCPS
   static boolean isEmpty(Object obj) {
     fixNull(obj).trim().isEmpty()
   }
 
+  @NonCPS
   static String wordWrap(String text, int maxLineSize = 70, String lineBreak = ' \\\n') {
     def words = text.split()
     def lines = ['']

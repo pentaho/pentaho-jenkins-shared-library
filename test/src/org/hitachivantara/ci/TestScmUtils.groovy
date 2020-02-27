@@ -22,6 +22,7 @@ import org.junit.Rule
 import org.junit.rules.RuleChain
 import spock.lang.Unroll
 
+import static org.hitachivantara.ci.config.LibraryProperties.BRANCH_NAME
 import static org.hitachivantara.ci.config.LibraryProperties.CHANGE_ID
 import static org.hitachivantara.ci.config.LibraryProperties.CHANGE_TARGET
 
@@ -57,13 +58,14 @@ class TestScmUtils extends BasePipelineSpecification {
         }
       }
     where:
-      branchName            || expectedSrc           | expectedDst
-      'master'              || 'refs/heads/master'   | 'refs/remotes/origin/master'
-      'heads/master'        || 'refs/heads/master'   | 'refs/remotes/origin/master'
-      'refs/heads/feature1' || 'refs/heads/feature1' | 'refs/remotes/origin/feature1'
-      'tags/tag1'           || 'refs/tags/tag1'      | 'refs/remotes/origin/tag1'
-      '9f0f5d0'             || 'refs/heads/9f0f5d0'  | 'refs/remotes/origin/9f0f5d0'
-      'heads/qa/test'       || 'refs/heads/qa/test'  | 'refs/remotes/origin/qa/test'
+      branchName            || expectedSrc             | expectedDst
+      'master'              || 'refs/heads/master'     | 'refs/remotes/origin/master'
+      'heads/master'        || 'refs/heads/master'     | 'refs/remotes/origin/master'
+      'refs/heads/feature1' || 'refs/heads/feature1'   | 'refs/remotes/origin/feature1'
+      'tags/tag1'           || 'refs/tags/tag1'        | 'refs/remotes/origin/tag1'
+      '9f0f5d0'             || 'refs/heads/9f0f5d0'    | 'refs/remotes/origin/9f0f5d0'
+      'heads/qa/test'       || 'refs/heads/qa/test'    | 'refs/remotes/origin/qa/test'
+      'feature/f1'          || 'refs/heads/feature/f1' | 'refs/remotes/origin/feature/f1'
   }
 
   def "test git Refspec is marked for update even if it isn’t a fast-forward"() {
@@ -209,7 +211,7 @@ class TestScmUtils extends BasePipelineSpecification {
 
   def "test PR checkout exception"() {
     given:
-      configRule.buildProperties = [(CHANGE_ID): '1', (CHANGE_TARGET): 'master']
+      configRule.addProperties([(BRANCH_NAME): 'PR-1', (CHANGE_ID): '1', (CHANGE_TARGET): 'master'])
       JobItem jobItem = Mock(JobItem) {
         getScmBranch() >> ('master')
         getScmInfo() >> ([:])
