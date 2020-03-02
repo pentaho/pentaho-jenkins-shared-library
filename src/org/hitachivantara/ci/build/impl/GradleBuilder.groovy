@@ -6,24 +6,24 @@
 
 package org.hitachivantara.ci.build.impl
 
+import org.hitachivantara.ci.FileUtils
 import org.hitachivantara.ci.JobItem
 import org.hitachivantara.ci.build.BuildFramework
 import org.hitachivantara.ci.build.BuilderException
-import org.hitachivantara.ci.build.IBuilder
-import org.hitachivantara.ci.build.helper.BuilderUtils
+import org.hitachivantara.ci.build.SonarAnalyser
 
-import static org.hitachivantara.ci.config.LibraryProperties.GRADLE_DEFAULT_COMMAND_OPTIONS
-import static org.hitachivantara.ci.config.LibraryProperties.GRADLE_DEFAULT_DIRECTIVES
-import static org.hitachivantara.ci.config.LibraryProperties.GRADLE_TEST_TARGETS
-import static org.hitachivantara.ci.config.LibraryProperties.JENKINS_GRADLE_FOR_BUILDS
-import static org.hitachivantara.ci.config.LibraryProperties.JENKINS_JDK_FOR_BUILDS
-import static org.hitachivantara.ci.config.LibraryProperties.WORKSPACE
+import static org.hitachivantara.ci.build.helper.BuilderUtils.process
+import static org.hitachivantara.ci.config.LibraryProperties.BRANCH_NAME
+import static org.hitachivantara.ci.config.LibraryProperties.CHANGE_ID
+import static org.hitachivantara.ci.config.LibraryProperties.CHANGE_TARGET
+import static org.hitachivantara.ci.config.LibraryProperties.LIB_CACHE_ROOT_PATH
+import static org.hitachivantara.ci.config.LibraryProperties.PR_STATUS_REPORTS
 
-class GradleBuilder extends AbstractBuilder implements IBuilder, Serializable {
+import static org.hitachivantara.ci.build.helper.BuilderUtils.applyBuildDirectives
+
+class GradleBuilder extends AbstractBuilder implements Serializable {
 
   String name = BuildFramework.GRADLE.name()
-
-  private final static String BASE_COMMAND = "gradle"
 
   GradleBuilder(String id, JobItem item) {
     this.item = item
@@ -32,106 +32,32 @@ class GradleBuilder extends AbstractBuilder implements IBuilder, Serializable {
 
   @Override
   String getExecutionCommand() {
-    Map buildProperties = buildData.getBuildProperties()
-    String gradleLocalRepoPath = "${buildProperties[WORKSPACE] ?: ''}/caches/.gradle"
-    String defaultGradleOpts = buildProperties[GRADLE_DEFAULT_COMMAND_OPTIONS]
+    StringBuilder command = new StringBuilder(getBaseCommand())
+    applyBuildDirectives(command, getDefaultDirectives(id), item.getDirectives(id))
+    return command.toString()
+  }
 
-    StringBuilder gradleCmd = new StringBuilder(BASE_COMMAND)
+  private String getBaseCommand() {
+    List command = []
 
-    if (defaultGradleOpts) {
-      gradleCmd << " ${buildProperties[GRADLE_DEFAULT_COMMAND_OPTIONS]}"
+    String gradlewPath = FileUtils.getPath(item.buildWorkDir, 'gradlew')
+    if (FileUtils.exists(gradlewPath)) {
+      command << './gradlew'
+    } else {
+      command << 'gradle'
     }
 
-    if (item.buildFile) {
-      gradleCmd << " -b ${item.buildFile}"
-    }
+    if (item.buildFile) command << "-b ${item.buildFile}"
+    if (item.settingsFile) command << "-c ${item.settingsFile}"
 
-    if (item.settingsFile) {
-      gradleCmd << " -c ${item.settingsFile}"
-    }
-
-    BuilderUtils.applyBuildDirectives(gradleCmd, buildProperties[GRADLE_DEFAULT_DIRECTIVES] as String, item.directives)
-    String testTargets = buildData.buildProperties[GRADLE_TEST_TARGETS] ?: ''
-
-    gradleCmd << " --gradle-user-home=${gradleLocalRepoPath}"
-
-    if (!testTargets.empty) {
-      gradleCmd << " -x "
-      gradleCmd << testTargets
-    }
-
-    steps.echo "Gradle build directives for ${item.getJobID()}: ${gradleCmd}"
-    return gradleCmd.toString()
+    return command.join(' ')
   }
 
   @Override
   Closure getExecution() {
-    throw new BuilderException('Not yet implemented')
-  }
-
-  @Override
-  void setBuilderData(Map builderData) {
-    this.buildData = builderData['buildData']
-    this.steps = builderData['dsl']
-  }
-
-  @Override
-  Closure getBuildClosure(JobItem jobItem) {
-
-    if (buildData.noop || jobItem.execNoop) {
-      return { -> steps.echo "${jobItem.getJobID()} NOOP so not building ${jobItem.getScmID()}" }
-    }
-
-    String gradleCmd = getExecutionCommand()
-
-    steps.echo "Gradle build directives for ${jobItem.getJobID()}: ${gradleCmd}"
-
-    return getGradleDsl(jobItem, gradleCmd)
-
-  }
-
-  @Override
-  Closure getTestClosure(JobItem jobItem) {
-
-    if (buildData.noop || jobItem.execNoop || !jobItem.testable) {
-      return { -> this.steps.echo "${jobItem.jobID}: skipped testing ${jobItem.scmID}" }
-    }
-
-    String testTargets = buildData.buildProperties[GRADLE_TEST_TARGETS] ?: ''
-
-    if (!testTargets.empty) {
-      StringBuilder gradleCmd = new StringBuilder(BASE_COMMAND)
-      gradleCmd << ' '
-
-      if (jobItem.buildFile) {
-        gradleCmd << "-b ${jobItem.buildFile}"
-        gradleCmd << ' '
-      }
-
-      if (jobItem.settingsFile) {
-        gradleCmd << "-c ${jobItem.settingsFile}"
-        gradleCmd << ' '
-      }
-
-      gradleCmd << testTargets
-      gradleCmd << ' '
-
-      BuilderUtils.applyBuildDirectives(gradleCmd, buildData.buildProperties[GRADLE_DEFAULT_DIRECTIVES] as String, jobItem.directives)
-
-      String forbidden = ['clean', 'build'].join('|')
-      gradleCmd = new StringBuilder(gradleCmd.replaceAll(~/(?i)\s?($forbidden)\s?/, ''))
-
-      return getGradleDsl(jobItem, gradleCmd.toString())
-
-    } else {
-      return { -> this.steps.echo "${jobItem.jobID}: no test targets defined" }
-
-    }
-  }
-
-  @Override
-  List<List<JobItem>> expandWorkItem(JobItem jobItem) {
-    return expandItem()
+    String gradleCommand = getExecutionCommand()
+    steps.log.info "Gradle directives for ${item.jobID}: $gradleCommand"
+    return getGradleDsl(gradleCommand)
   }
 
   @Override
@@ -141,32 +67,67 @@ class GradleBuilder extends AbstractBuilder implements IBuilder, Serializable {
   }
 
   @Override
-  void markChanges(JobItem jobItem) {
-    applyScmChanges()
-  }
-
-  @Override
   void applyScmChanges() {
     // not implemented
   }
 
   @Override
   Closure getSonarExecution() {
-    // not implemented
-    return { -> }
+    SonarAnalyser analyser = new GradleSonarAnalyser(getBaseCommand())
+    String gradleCommand = analyser.getCommand()
+    steps.log.info "Gradle SonarAnalyser directives for ${item.jobID}: $gradleCommand"
+    return getGradleDsl(gradleCommand)
   }
 
-  Closure getGradleDsl(JobItem jobItem, String gradleCmd) {
-    Map buildProperties = buildData.getBuildProperties()
+  Closure getGradleDsl(String cmd) {
+    String localRepoPath = "${buildData.getString(LIB_CACHE_ROOT_PATH)}/gradle"
 
     return { ->
-      this.steps.dir(jobItem.buildWorkDir) {
-        this.steps.withEnv(["PATH+GRADLE=${this.steps.tool "${buildProperties[JENKINS_GRADLE_FOR_BUILDS]}"}/bin",
-                            "JAVA_HOME=${this.steps.tool "${buildProperties[JENKINS_JDK_FOR_BUILDS]}"}"]) {
-          BuilderUtils.process(gradleCmd, this.steps)
+      this.steps.dir(item.buildWorkDir) {
+        steps.withEnv([
+          "GRADLE_OPTS=${opts}"
+        ]) {
+          if (item.containerized) {
+            process("${cmd} -g ${localRepoPath}", steps)
+          } else {
+            throw new BuilderException('Non containerized builds are not allowed for Gradle at the moment')
+          }
         }
       }
     }
   }
 
+  class GradleSonarAnalyser extends SonarAnalyser implements Serializable {
+    String task = 'sonarqube'
+    String baseCommand
+
+    GradleSonarAnalyser(String baseCommand) {
+      this.baseCommand = baseCommand
+    }
+
+    @Override
+    String getCommand() {
+      // need an actual command builder, but this will do for now
+      List command = [baseCommand]
+      command << task
+
+      if (buildData.isPullRequest()) {
+        command << "-Dsonar.pullrequest.branch=${buildData.getString(BRANCH_NAME)}"
+        command << "-Dsonar.pullrequest.key=${buildData.get(CHANGE_ID)}"
+        command << "-Dsonar.pullrequest.base=${buildData.get(CHANGE_TARGET)}"
+
+        // pipeline-github plugin provides PR head commit so we can tell sonar and avoid considering the merge commit
+        command << "-Dsonar.scm.revision=${steps.pullRequest.head}"
+
+        if (buildData.getBool(PR_STATUS_REPORTS)) {
+          command << "-Dsonar.pullrequest.github.repository=${item.scmInfo.organization}/${item.scmInfo.repository}"
+        }
+      } else if (buildData.getString(BRANCH_NAME) != 'master') {
+        // send branch name only if it's not master, sending master on a first scan causes error
+        command << "-Dsonar.branch.name=${buildData.getString(BRANCH_NAME)}"
+      }
+
+      return command.join(' ')
+    }
+  }
 }

@@ -15,6 +15,8 @@ import java.nio.file.Paths
 import java.util.regex.Matcher
 import java.util.regex.Pattern
 
+import static org.hitachivantara.ci.StringUtils.normalizeString
+
 import static org.hitachivantara.ci.config.LibraryProperties.BRANCH_NAME
 import static org.hitachivantara.ci.config.LibraryProperties.BUILDS_ROOT_PATH
 import static org.hitachivantara.ci.config.LibraryProperties.CHANGE_ID
@@ -117,6 +119,8 @@ class JobItem implements Serializable {
     if (data.scmInfo) {
       data.scmID += "${data.scmInfo.organization}.${data.scmInfo.repository}.${data.scmBranch}"
       if (data.atomicScmCheckout) data.scmID += "~${jobGroup}.${data.jobID}"
+
+      data.scmID = normalizeString(data.scmID)
     }
 
     Path buildsDir = Paths.get(data.getString(BUILDS_ROOT_PATH))
