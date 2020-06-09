@@ -46,6 +46,7 @@ class LibraryProperties implements Serializable {
   public static final String ARCHIVING_EXCLUDE_PATTERN = "ARCHIVING_EXCLUDE_PATTERN"
   public static final String ARCHIVING_CONFIG = 'ARCHIVING_CONFIG'
   public static final String ARCHIVING_PATH_GROUP_REGEX = 'ARCHIVING_PATH_GROUP_REGEX'
+  public static final String ARCHIVE_TO_JENKINS_MASTER = 'ARCHIVE_TO_JENKINS_MASTER'
 
 
   //***********************************
