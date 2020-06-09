@@ -204,16 +204,16 @@ Archiving artifacts by copying them to '${targetFolder}':
         FileUtils.copy(file, FileUtils.create(Paths.get(targetFolder, archiveFileName) as String))
       }
 
-      if (buildData.isMinion()) {
-        if (buildData.isSet(BUILD_HOSTING_ROOT)) {
-          String artifactsDir = currentBuild.artifactsDir as String
-          artifacts.keySet().each {
-            FileUtils.createHardLink(artifactsDir, targetFolder, it)
-          }
-        } else {
-          FileUtils.createSymLink(currentBuild.getRootDir() as String, targetFolder, 'archive')
-        }
-      }
+      //if (buildData.isMinion()) {
+      //  if (buildData.isSet(BUILD_HOSTING_ROOT)) {
+      //    String artifactsDir = currentBuild.artifactsDir as String
+      //    artifacts.keySet().each {
+      //      FileUtils.createHardLink(artifactsDir, targetFolder, it)
+      //    }
+      //  } else {
+      //    FileUtils.createSymLink(currentBuild.getRootDir() as String, targetFolder, 'archive')
+      //  }
+      //}
 
     } else {
       dsl.log.info "No artifacts found with current pattern. Looking in '${rootFolder}'"
