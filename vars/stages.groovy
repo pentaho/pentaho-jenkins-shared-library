@@ -21,6 +21,7 @@ import org.hitachivantara.ci.stages.SimpleStage
 import org.hitachivantara.ci.github.GitHubManager
 import org.hitachivantara.ci.jenkins.MinionHandler
 
+import static org.hitachivantara.ci.config.LibraryProperties.ARCHIVE_TO_JENKINS_MASTER
 import static org.hitachivantara.ci.config.LibraryProperties.BUILD_HOSTING_ROOT
 import static org.hitachivantara.ci.config.LibraryProperties.BUILD_RETRIES
 import static org.hitachivantara.ci.config.LibraryProperties.CLEAN_ALL_CACHES
@@ -179,7 +180,7 @@ void archive(String id = 'archive', String label = '') {
     onFinished: {
       // when in a upstream build that archives to hosted, create a symlink so that all the artifacts become accessible
       // from jenkins main build
-      if (!buildData.isMinion() && buildData.isSet(BUILD_HOSTING_ROOT)) {
+      if (buildData.isSet(ARCHIVE_TO_JENKINS_MASTER) && !buildData.isMinion() && buildData.isSet(BUILD_HOSTING_ROOT)) {
         FileUtils.createSymLink(currentBuild.rawBuild.getRootDir() as String, ArchivingHelper.getHostedRoot(buildData), 'archive')
       }
     }
