@@ -14,6 +14,7 @@ import org.hitachivantara.ci.jenkins.MinionHandler
 
 import static org.hitachivantara.ci.build.helper.BuilderUtils.partition
 import static org.hitachivantara.ci.config.LibraryProperties.ARCHIVE_ARTIFACTS
+import static org.hitachivantara.ci.config.LibraryProperties.ARCHIVE_TO_JENKINS_MASTER
 import static org.hitachivantara.ci.config.LibraryProperties.IGNORE_PIPELINE_FAILURE
 import static org.hitachivantara.ci.config.LibraryProperties.PARALLEL_ARCHIVING_CHUNKSIZE
 import static org.hitachivantara.ci.config.LibraryProperties.RUN_BUILDS
@@ -90,7 +91,7 @@ void doArchiving(BuildData buildData) {
 
   // when in a upstream build that archives to hosted, create a symlink so that all the artifacts become accessible
   // from jenkins main build
-  if (!buildData.isMinion() && buildData.isSet(BUILD_HOSTING_ROOT)) {
+  if (buildData.isSet(ARCHIVE_TO_JENKINS_MASTER) && !buildData.isMinion() && buildData.isSet(BUILD_HOSTING_ROOT)) {
     FileUtils.createSymLink(currentBuild.rawBuild.getRootDir() as String, ArchivingHelper.getHostedRoot(buildData), 'archive')
   }
 }
