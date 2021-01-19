@@ -101,15 +101,15 @@ class MinionHandler {
 
       workJobItems.each { JobItem item ->
         steps.log.debug "Creating minion job for ${item.jobID}"
+        
+        Map extraProps = [(BUILD_DATA_ROOT_PATH): getBuildDataPath(),
+                          (BUILD_DATA_FILE)     : getBuildDataFilename(item)]
 
         String script = steps.resolveTemplate(templateSource + [
           parameters: [
-            libraries : libraries,
-            properties: new ConfigurationMap(buildData.buildProperties, [
-              (BUILD_DATA_ROOT_PATH): getBuildDataPath(),
-              (BUILD_DATA_FILE)     : getBuildDataFilename(item),
-            ]),
-            item: item.export()
+            libraries  : libraries,
+            properties : buildData.buildProperties + extraProps,
+            item       : item.export()
           ]
         ])
 
