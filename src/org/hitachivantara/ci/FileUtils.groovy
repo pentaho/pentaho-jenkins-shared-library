@@ -125,6 +125,21 @@ class FileUtils {
   }
 
   /**
+   * Copy files between two locations using sh.
+   * If this file already exists, it will be overwritten.
+   * If the directory doesn't exist, it will be created.
+   * @param source
+   * @param target
+   */
+  static void shellCopy(def source, def target) {
+    FilePath sourcePath = create(source)
+    FilePath targetPath = create(target)
+    steps.sh "cp -fR ${sourcePath} ${targetPath}"
+    // steps.log.info "Copied ${sourcePath} to ${targetPath} using shell"
+  }
+
+
+  /**
    * Copies this file to the specified target on master node.
    * @param src
    * @param target

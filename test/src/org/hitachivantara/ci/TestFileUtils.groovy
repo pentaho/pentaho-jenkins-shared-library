@@ -77,6 +77,22 @@ class TestFileUtils extends BasePipelineSpecification {
       'target/version.properties' || true // a 2nd time to guarantee that the file gets replaced
   }
 
+  def "test shell file copy"() {
+    given:
+      registerAllowedMethod('isUnix', [], { -> true })
+    when:
+      File sourcefile = new File('test/resources/archive/version.properties')
+      File targetFile = new File('target/version.properties')
+      FileUtils.shellCopy(sourcefile, targetFile)
+    then:
+      targetFile.exists() == exists
+
+    where:
+      targetFilePath              || exists
+      'target/version.properties' || true
+      'target/version.properties' || true // a 2nd time to guarantee that the file gets replaced
+  }
+
   def "test find files"() {
     expect:
       FileUtils.findFiles('test/resources/archive', "regex:${pattern}", excludes).size() == filesFound
