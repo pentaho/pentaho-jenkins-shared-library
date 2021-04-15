@@ -305,11 +305,13 @@ class MavenBuilder extends AbstractBuilder implements IBuilder, Serializable {
           steps.withCredentials([steps.usernamePassword(credentialsId: deployCredentials,
             usernameVariable: 'NEXUS_DEPLOY_USER', passwordVariable: 'NEXUS_DEPLOY_PASSWORD')]) {
 
+            String localSettingsFile = item.settingsFile ?: settingsFile
+
             if (item.containerized) {
-              process("${cmd} -V -s ${settingsFile} -Dmaven.repo.local='${localRepoPath}'", steps)
+              process("${cmd} -V -s ${localSettingsFile} -Dmaven.repo.local='${localRepoPath}'", steps)
             } else {
               steps.withMaven(
-                mavenSettingsFilePath: settingsFile,
+                mavenSettingsFilePath: localSettingsFile,
                 jdk: jdk,
                 maven: jenkinsTool,
                 mavenLocalRepo: localRepoPath,
