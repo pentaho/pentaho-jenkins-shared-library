@@ -202,7 +202,7 @@ Archiving artifacts by copying them to '${targetFolder}':
       }
 
       artifacts.each { String archiveFileName, FilePath file ->
-        FileUtils.copy(file, FileUtils.create(Paths.get(targetFolder, archiveFileName) as String))
+        FileUtils.shellCopy(file, FileUtils.create(Paths.get(targetFolder, archiveFileName) as String))
       }
 
       if (buildData.isSet(ARCHIVE_TO_JENKINS_MASTER) && buildData.isMinion()) {
