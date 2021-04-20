@@ -134,8 +134,9 @@ class FileUtils {
   static void shellCopy(def source, def target) {
     FilePath sourcePath = create(source)
     FilePath targetPath = create(target)
+    FilePath targetFolder = targetPath.getParent()
+    steps.sh "mkdir -p ${targetFolder}"
     steps.sh "cp -fR ${sourcePath} ${targetPath}"
-    // steps.log.info "Copied ${sourcePath} to ${targetPath} using shell"
   }
 
 
