@@ -21,6 +21,7 @@ import static org.hitachivantara.ci.config.LibraryProperties.CLEAN_ALL_CACHES
 import static org.hitachivantara.ci.config.LibraryProperties.CLEAN_BUILD_WORKSPACE
 import static org.hitachivantara.ci.config.LibraryProperties.CLEAN_CACHES_REGEX
 import static org.hitachivantara.ci.config.LibraryProperties.CLEAN_SCM_WORKSPACES
+import static org.hitachivantara.ci.config.LibraryProperties.CLEAN_MINION_DATA
 import static org.hitachivantara.ci.config.LibraryProperties.CREATE_TAG
 import static org.hitachivantara.ci.config.LibraryProperties.IS_MINION
 import static org.hitachivantara.ci.config.LibraryProperties.IS_MULTIBRANCH_MINION
@@ -185,7 +186,7 @@ class BuildData implements Serializable {
   }
 
   Boolean isRunPostClean() {
-    !getBool(NOOP) && getBool(CLEAN_BUILD_WORKSPACE)
+    !getBool(NOOP) && (getBool(CLEAN_BUILD_WORKSPACE) || getBool(CLEAN_MINION_DATA))
   }
 
   Boolean isRunVersioning() {
