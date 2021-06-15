@@ -99,6 +99,7 @@ class LibraryProperties implements Serializable {
   public static final String CLEAN_BUILD_WORKSPACE = 'CLEAN_BUILD_WORKSPACE'
   public static final String CLEAN_CACHES_REGEX = 'CLEAN_CACHES_REGEX'
   public static final String CLEAN_SCM_WORKSPACES = 'CLEAN_SCM_WORKSPACES'
+  public static final String CLEAN_MINION_DATA = 'CLEAN_MINION_DATA'
 
   //*********
   //** VCS **

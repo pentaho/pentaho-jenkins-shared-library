@@ -20,3 +20,8 @@ If true the scm checked out files will be wiped.
 If true wipes the build workspace.
 
 **Default:** false
+
+### CLEAN_MINION_DATA
+If true wipes the minion yamls directory.
+
+**Default:** true

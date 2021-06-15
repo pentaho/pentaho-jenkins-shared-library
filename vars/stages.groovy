@@ -28,6 +28,7 @@ import static org.hitachivantara.ci.config.LibraryProperties.CLEAN_ALL_CACHES
 import static org.hitachivantara.ci.config.LibraryProperties.CLEAN_BUILD_WORKSPACE
 import static org.hitachivantara.ci.config.LibraryProperties.CLEAN_CACHES_REGEX
 import static org.hitachivantara.ci.config.LibraryProperties.CLEAN_SCM_WORKSPACES
+import static org.hitachivantara.ci.config.LibraryProperties.CLEAN_MINION_DATA
 import static org.hitachivantara.ci.config.LibraryProperties.STAGE_LABEL_COLLECT_JOB_DATA
 import static org.hitachivantara.ci.config.LibraryProperties.STAGE_LABEL_REPORT
 import static org.hitachivantara.ci.config.LibraryProperties.TAG_MESSAGE
@@ -218,10 +219,14 @@ void postClean(String label = 'Post Clean') {
         retry(buildData.getInt(BUILD_RETRIES)) {
           clean.workspace()
         }
+      } else if (buildData.getBool(CLEAN_MINION_DATA)) {
+        retry(buildData.getInt(BUILD_RETRIES)) {
+          clean.minionData()
+        }
       }
     },
     isRun: {
-      buildData.getBool(CLEAN_BUILD_WORKSPACE)
+      buildData.getBool(CLEAN_BUILD_WORKSPACE) || buildData.getBool(CLEAN_MINION_DATA)
     }
   ).run()
 }

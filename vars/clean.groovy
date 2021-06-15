@@ -131,3 +131,14 @@ def postStage(String label = STAGE_LABEL_POSTCLEAN) {
     }
   }
 }
+
+
+/**
+ * Clear the minion data yamls
+ */
+void minionData() {
+  BuildData buildData = BuildData.instance
+
+  log.info "Deleting ${buildData.getString(WORKSPACE)}/minions"
+  delete(path: buildData.getString(WORKSPACE)+"/minions")
+}
