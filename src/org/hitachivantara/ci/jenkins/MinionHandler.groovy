@@ -12,6 +12,8 @@ import org.hitachivantara.ci.config.BuildData
 import org.hitachivantara.ci.config.ConfigurationException
 import org.hitachivantara.ci.config.ConfigurationMap
 import org.jenkinsci.plugins.workflow.cps.CpsScript
+import groovy.text.SimpleTemplateEngine
+import groovy.text.TemplateEngine
 
 import java.nio.file.Paths
 
@@ -89,11 +91,11 @@ class MinionHandler {
       String rootFolderPath = getRootFolderPath()
 
       // use the defined template or the default ones
-      Map templateSource
+      String templateSource
       if(buildData.isSet(MINION_PIPELINE_TEMPLATE)){
-        templateSource = [file: buildData.getString(MINION_PIPELINE_TEMPLATE)]
+        templateSource = steps.readFile(file: buildData.getString(MINION_PIPELINE_TEMPLATE), encoding: 'UTF-8')
       } else {
-        templateSource = [text: getDefaultPipelineTemplate()]
+        templateSource = getDefaultPipelineTemplate()
       }
 
       // add all the current build libraries
@@ -101,22 +103,23 @@ class MinionHandler {
 
       workJobItems.each { JobItem item ->
         steps.log.debug "Creating minion job for ${item.jobID}"
-        
-        Map extraProps = [(BUILD_DATA_ROOT_PATH): getBuildDataPath(),
-                          (BUILD_DATA_FILE)     : getBuildDataFilename(item)]
 
-        String script = steps.resolveTemplate(templateSource + [
-          parameters: [
-            libraries  : libraries,
-            properties : buildData.buildProperties + extraProps,
-            item       : item.export()
-          ]
-        ])
+        Map parameters = [
+          libraries : libraries,
+          properties: new ConfigurationMap(buildData.buildProperties, [
+            (BUILD_DATA_ROOT_PATH): getBuildDataPath(),
+            (BUILD_DATA_FILE)     : getBuildDataFilename(item),
+          ]),
+          item: item.export()
+        ]
+
+        TemplateEngine engine = new SimpleTemplateEngine()
+        Writable template = engine.createTemplate(templateSource).make(parameters)
 
         Map jobConfig = [
           name: getJobName(item),
           folder: rootFolderPath,
-          script: script
+          script: template.toString()
         ]
 
         if (buildData.getBool(USE_MINION_MULTIBRANCH_JOBS)) {
@@ -135,8 +138,8 @@ class MinionHandler {
               prMerge       : item.prMerge
             ]
           ]
-        } 
-        
+        }
+
         steps.createJob(jobConfig)
       }
 
