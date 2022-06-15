@@ -16,7 +16,7 @@ import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
 import org.jenkinsci.plugins.workflow.job.WorkflowJob
 import org.jenkinsci.plugins.workflow.flow.FlowDefinition
 import org.jenkinsci.plugins.workflow.cps.CpsScmFlowDefinition
-
+import static org.hitachivantara.ci.config.LibraryProperties.ARTIFACT_DEPLOYER_CREDENTIALS_ID
 import static org.hitachivantara.ci.config.LibraryProperties.DOCKER_IMAGE_HOST
 import static org.hitachivantara.ci.config.LibraryProperties.SLAVE_NODE_LABEL
 import static org.hitachivantara.ci.config.LibraryProperties.DOCKER_REGISTRY_URL
