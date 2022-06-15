@@ -303,7 +303,7 @@ class MavenBuilder extends AbstractBuilder implements IBuilder, Serializable {
           "MAVEN_OPTS=${mavenOpts}"
         ]) {
           steps.withCredentials([steps.usernamePassword(credentialsId: deployCredentials,
-            usernameVariable: 'NEXUS_DEPLOY_USER', passwordVariable: 'NEXUS_DEPLOY_PASSWORD')]) {
+            usernameVariable: 'NEXUS_DEPLOY_USER', passwordVariable: 'SAAS_DEPLOY_PASSWORD')]) {
 
             String localSettingsFile = item.settingsFile ?: settingsFile
 
