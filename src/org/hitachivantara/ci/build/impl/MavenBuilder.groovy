@@ -28,6 +28,7 @@ import static org.hitachivantara.ci.FileUtils.isChild
 import static org.hitachivantara.ci.build.helper.BuilderUtils.process
 import static org.hitachivantara.ci.FileUtils.resolve
 import static org.hitachivantara.ci.config.LibraryProperties.ARTIFACT_DEPLOYER_CREDENTIALS_ID
+import static org.hitachivantara.ci.config.LibraryProperties.SCM_API_TOKEN_CREDENTIALS_ID
 import static org.hitachivantara.ci.config.LibraryProperties.BRANCH_NAME
 import static org.hitachivantara.ci.config.LibraryProperties.CHANGE_ID
 import static org.hitachivantara.ci.config.LibraryProperties.CHANGE_TARGET
@@ -288,6 +289,7 @@ class MavenBuilder extends AbstractBuilder implements IBuilder, Serializable {
     String mavenOpts = "${BASE_OPTS} ${opts}"
     String localRepoPath = "${buildData.getString(LIB_CACHE_ROOT_PATH)}/maven"
     String deployCredentials = buildData.getString(ARTIFACT_DEPLOYER_CREDENTIALS_ID)
+    String scmApiTokenCredential = buildData.getString(SCM_API_TOKEN_CREDENTIALS_ID)
 
     return { ->
       steps.dir(item.buildWorkDir) {
@@ -303,7 +305,8 @@ class MavenBuilder extends AbstractBuilder implements IBuilder, Serializable {
           "MAVEN_OPTS=${mavenOpts}"
         ]) {
           steps.withCredentials([steps.usernamePassword(credentialsId: deployCredentials,
-            usernameVariable: 'NEXUS_DEPLOY_USER', passwordVariable: 'NEXUS_DEPLOY_PASSWORD')]) {
+            usernameVariable: 'NEXUS_DEPLOY_USER', passwordVariable: 'NEXUS_DEPLOY_PASSWORD'),
+            steps.string(credentialsId: scmApiTokenCredential, variable: 'SCM_API_TOKEN')]) {
 
             String localSettingsFile = item.settingsFile ?: settingsFile
 
