@@ -125,6 +125,7 @@ class LibraryProperties implements Serializable {
   public static final String ARTIFACT_DEPLOYER_CREDENTIALS_ID = 'ARTIFACT_DEPLOYER_CREDENTIALS_ID'
   public static final String SLACK_CREDENTIALS_ID = 'SLACK_CREDENTIALS_ID'
   public static final String SCM_CREDENTIALS_ID = 'SCM_CREDENTIALS_ID'
+  public static final String SCM_API_TOKEN_CREDENTIALS_ID = 'SCM_API_TOKEN_CREDENTIALS_ID'
 
 
   //*******************
