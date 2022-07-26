@@ -39,6 +39,7 @@ class TestMavenChangeDetector extends BasePipelineSpecification {
     registerAllowedMethod('withEnv', [List, Closure], null)
     registerAllowedMethod("withCredentials", [List, Closure], null)
     registerAllowedMethod("usernamePassword", [Map], null)
+    registerAllowedMethod("string", [Map], null)
     registerAllowedMethod("withMaven", [Map, Closure], null)
 
     registerAllowedMethod('getMavenCommandBuilder', [Map], { Map params ->
