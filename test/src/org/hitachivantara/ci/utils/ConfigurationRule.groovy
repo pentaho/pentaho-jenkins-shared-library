@@ -6,8 +6,8 @@ import org.hitachivantara.ci.FilePathException
 import org.hitachivantara.ci.JobItem
 import org.hitachivantara.ci.config.BuildData
 import org.hitachivantara.ci.config.BuildDataBuilder
-import org.jenkinsci.plugins.pipeline.utility.steps.shaded.org.yaml.snakeyaml.Yaml
-import org.jenkinsci.plugins.pipeline.utility.steps.shaded.org.yaml.snakeyaml.constructor.SafeConstructor
+import org.yaml.snakeyaml.Yaml
+import org.yaml.snakeyaml.constructor.SafeConstructor
 import org.junit.rules.ExternalResource
 
 import java.nio.file.Paths

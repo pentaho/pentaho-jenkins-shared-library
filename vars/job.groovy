@@ -12,7 +12,7 @@ import org.hitachivantara.ci.config.BuildData
 import org.hitachivantara.ci.jenkins.JobBuild
 import org.hitachivantara.ci.jenkins.JobException
 import org.hitachivantara.ci.jenkins.JobUtils
-import org.jenkinsci.plugins.pipeline.utility.steps.shaded.org.yaml.snakeyaml.Yaml
+import org.yaml.snakeyaml.Yaml
 import org.jenkinsci.plugins.workflow.actions.WarningAction
 import org.jenkinsci.plugins.workflow.graph.FlowNode
 
