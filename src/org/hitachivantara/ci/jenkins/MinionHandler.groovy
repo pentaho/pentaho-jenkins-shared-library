@@ -88,7 +88,9 @@ class MinionHandler {
           steps.writeYaml(file: filename, data: data)
           steps.log.info "Here111"
         }
+        steps.log.info "Here2222"
       }
+      steps.log.info "Here3333"
       
       // the minion jobs are created inside a configurable folder
       String rootFolderPath = getRootFolderPath()
