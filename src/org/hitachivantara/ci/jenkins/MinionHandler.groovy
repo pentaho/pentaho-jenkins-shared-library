@@ -74,7 +74,6 @@ class MinionHandler {
     List<JobItem> workJobItems = allJobItems.findAll { JobItem ji -> !ji.execNoop }
 
     try {
-      steps.log.info "Starting!!!!!!!!!!!"
       // generate minion build data
       steps.dir(getBuildDataPath()) {
         workJobItems.each { JobItem ji ->
@@ -87,7 +86,7 @@ class MinionHandler {
           steps.writeYaml(file: filename, data: data)
         }
       }
-
+      steps.log.info "Here111"
       // the minion jobs are created inside a configurable folder
       String rootFolderPath = getRootFolderPath()
 
@@ -98,6 +97,8 @@ class MinionHandler {
       } else {
         templateSource = getDefaultPipelineTemplate()
       }
+      
+      steps.log.info "Here222"
 
       // add all the current build libraries
       List libraries = JobUtils.getLoadedLibraries(steps.currentBuild)
