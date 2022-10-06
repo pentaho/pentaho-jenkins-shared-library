@@ -74,13 +74,14 @@ class MinionHandler {
     List<JobItem> workJobItems = allJobItems.findAll { JobItem ji -> !ji.execNoop }
 
     try {
+      steps.log.info "Starting!!!!!!!!!!!"
       // generate minion build data
       steps.dir(getBuildDataPath()) {
         workJobItems.each { JobItem ji ->
           String filename = getBuildDataFilename(ji)
           Map data = getYamlData(ji)
 
-          steps.log.debug "Creating minion build file ${filename}"
+          steps.log.info "Creating minion build file ${filename}"
 
           steps.delete(path: filename)
           steps.writeYaml(file: filename, data: data)
@@ -102,7 +103,7 @@ class MinionHandler {
       List libraries = JobUtils.getLoadedLibraries(steps.currentBuild)
 
       workJobItems.each { JobItem item ->
-        steps.log.debug "Creating minion job for ${item.jobID}"
+        steps.log.info "Creating minion job for ${item.jobID}"
 
         Map parameters = [
           libraries : libraries,
@@ -151,7 +152,7 @@ class MinionHandler {
       existingMinions.each { Item item ->
         if (!minionJobNames.contains(item.name)) {
           item.delete()
-          steps.log.debug("Deleted '${item.name}'")
+          steps.log.info("Deleted '${item.name}'")
         }
       }
     } catch (Throwable e) {
