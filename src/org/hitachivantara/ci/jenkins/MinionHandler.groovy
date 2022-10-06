@@ -83,10 +83,13 @@ class MinionHandler {
           steps.log.info "Creating minion build file ${filename}"
 
           steps.delete(path: filename)
+          steps.log.info "${filename}"
+          steps.log.info "${data}"
           steps.writeYaml(file: filename, data: data)
+          steps.log.info "Here111"
         }
       }
-      steps.log.info "Here111"
+      
       // the minion jobs are created inside a configurable folder
       String rootFolderPath = getRootFolderPath()
 
@@ -98,7 +101,6 @@ class MinionHandler {
         templateSource = getDefaultPipelineTemplate()
       }
       
-      steps.log.info "Here222"
 
       // add all the current build libraries
       List libraries = JobUtils.getLoadedLibraries(steps.currentBuild)
