@@ -83,14 +83,9 @@ class MinionHandler {
           steps.log.info "Creating minion build file ${filename}"
 
           steps.delete(path: filename)
-          steps.log.info "${filename}"
-          steps.log.info "${data}"
           steps.writeYaml(file: filename, data: data)
-          steps.log.info "Here111"
         }
-        steps.log.info "Here2222"
       }
-      steps.log.info "Here3333"
       
       // the minion jobs are created inside a configurable folder
       String rootFolderPath = getRootFolderPath()
@@ -119,6 +114,8 @@ class MinionHandler {
           item: item.export()
         ]
 
+        steps.log.info "Here3333"
+        
         TemplateEngine engine = new SimpleTemplateEngine()
         Writable template = engine.createTemplate(templateSource).make(parameters)
 
@@ -127,6 +124,8 @@ class MinionHandler {
           folder: rootFolderPath,
           script: template.toString()
         ]
+        
+        steps.log.info "Here4444"
 
         if (buildData.getBool(USE_MINION_MULTIBRANCH_JOBS)) {
           jobConfig << [
@@ -146,9 +145,12 @@ class MinionHandler {
           ]
         }
 
+        steps.log.info "Here555"
         steps.createJob(jobConfig)
       }
 
+      steps.log.info "Here666"
+      
       // cleanup the minion folder
       ItemGroup minionFolder = JobUtils.getFolder(rootFolderPath)
       List minionJobNames = allJobItems.collect { JobItem ji -> getJobName(ji) }
