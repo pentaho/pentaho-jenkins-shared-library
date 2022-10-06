@@ -142,7 +142,7 @@ class MinionHandler {
         }
 
         steps.log.info "Here555"
-        steps.log.info "jobConfig"
+        steps.log.info "${jobConfig}"
         steps.createJob(jobConfig)
         steps.log.info "Here666"
       }
