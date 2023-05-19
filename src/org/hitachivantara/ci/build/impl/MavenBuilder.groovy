@@ -102,7 +102,7 @@ class MavenBuilder extends AbstractBuilder implements IBuilder, Serializable {
   }
 
   MavenModule buildMavenModule(CommandBuilder command) throws Exception {
-    Properties properties = command.getUserProperties()
+    Map properties = command.getUserProperties()
     List<String> activeProfiles = command.getActiveProfileIds()
     List<String> inactiveProfiles = command.getInactiveProfileIds()
     String file = Paths.get(item.buildWorkDir, item.buildFile ?: item.buildFramework.buildFile).toString()
