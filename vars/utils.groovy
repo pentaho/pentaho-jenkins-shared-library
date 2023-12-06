@@ -280,7 +280,7 @@ void withContainer(String imageName, Closure body) {
   // set the current directory to the global workspace so it gets properly mounted as a volume
   // this may not be needed but it makes sure we dont mount one of the random workspace@N directories instead
   dir(buildData.getString(WORKSPACE)) {
-    docker.withRegistry(buildData.getString(DOCKER_REGISTRY_URL)) {
+    docker.withRegistry(buildData.getString(DOCKER_REGISTRY_URL), buildData.getString(ARTIFACT_DEPLOYER_CREDENTIALS_ID)) {
       def image = docker.image("${buildData.getString(DOCKER_IMAGE_HOST)}/${imageName}")
       image.pull()
       image.inside(args) {
