@@ -21,6 +21,7 @@ import static org.hitachivantara.ci.config.LibraryProperties.DOCKER_IMAGE_HOST
 import static org.hitachivantara.ci.config.LibraryProperties.SLAVE_NODE_LABEL
 import static org.hitachivantara.ci.config.LibraryProperties.DOCKER_REGISTRY_URL
 import static org.hitachivantara.ci.config.LibraryProperties.WORKSPACE
+import static org.hitachivantara.ci.config.LibraryProperties.ARTIFACT_DEPLOYER_CREDENTIALS_ID
 
 /**
  * Call the body, and catch any exception.
