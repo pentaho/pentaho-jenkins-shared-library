@@ -39,6 +39,8 @@ import static org.hitachivantara.ci.config.LibraryProperties.PR_STATUS_REPORTS
 import static org.hitachivantara.ci.config.LibraryProperties.DOCKER_RESOLVE_REPO
 import static org.hitachivantara.ci.config.LibraryProperties.DOCKER_PUBLIC_PUSH_REPO
 import static org.hitachivantara.ci.config.LibraryProperties.DOCKER_PRIVATE_PUSH_REPO
+import static org.hitachivantara.ci.config.LibraryProperties.NODEJS_BUNDLE_REPO_URL
+import static org.hitachivantara.ci.config.LibraryProperties.NPM_RELEASE_REPO_URL
 
 class MavenBuilder extends AbstractBuilder implements IBuilder, Serializable {
 
@@ -288,6 +290,8 @@ class MavenBuilder extends AbstractBuilder implements IBuilder, Serializable {
     String jdk = buildData.getString(JENKINS_JDK_FOR_BUILDS)
     String mavenOpts = "${BASE_OPTS} ${opts}"
     String localRepoPath = "${buildData.getString(LIB_CACHE_ROOT_PATH)}/maven"
+    String nodeDownloadRoot = buildData.getString(NODEJS_BUNDLE_REPO_URL)
+    String npmDownloadRoot = buildData.getString(NPM_RELEASE_REPO_URL)
     String deployCredentials = buildData.getString(ARTIFACT_DEPLOYER_CREDENTIALS_ID)
     String scmApiTokenCredential = buildData.getString(SCM_API_TOKEN_CREDENTIALS_ID)
 
@@ -311,7 +315,7 @@ class MavenBuilder extends AbstractBuilder implements IBuilder, Serializable {
             String localSettingsFile = item.settingsFile ?: settingsFile
 
             if (item.containerized) {
-              process("${cmd} -V -s ${localSettingsFile} -Dmaven.repo.local='${localRepoPath}'", steps)
+              process("${cmd} -V -s ${localSettingsFile} -Dmaven.repo.local='${localRepoPath}' -DnodeDownloadRoot='${nodeDownloadRoot}' -DnpmDownloadRoot='${npmDownloadRoot}'", steps)
             } else {
               steps.withMaven(
                 mavenSettingsFilePath: localSettingsFile,
