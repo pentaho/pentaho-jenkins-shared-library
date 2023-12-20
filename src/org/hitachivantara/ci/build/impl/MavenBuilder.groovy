@@ -290,6 +290,8 @@ class MavenBuilder extends AbstractBuilder implements IBuilder, Serializable {
     String jdk = buildData.getString(JENKINS_JDK_FOR_BUILDS)
     String mavenOpts = "${BASE_OPTS} ${opts}"
     String localRepoPath = "${buildData.getString(LIB_CACHE_ROOT_PATH)}/maven"
+    String nodeDownloadRoot = "${buildData.getString(NODEJS_BUNDLE_REPO_URL)}"
+    String npmDownloadRoot = "${buildData.getString(NPM_RELEASE_REPO_URL)}"
     String deployCredentials = buildData.getString(ARTIFACT_DEPLOYER_CREDENTIALS_ID)
     String scmApiTokenCredential = buildData.getString(SCM_API_TOKEN_CREDENTIALS_ID)
 
