@@ -118,6 +118,11 @@ class LibraryProperties implements Serializable {
   public static final String DOCKER_PUBLIC_PUSH_REPO = 'DOCKER_PUBLIC_PUSH_REPO'
   public static final String DOCKER_PRIVATE_PUSH_REPO = 'DOCKER_PRIVATE_PUSH_REPO'
 
+  //**********************************
+  //** Properties for additional Maven options **
+  //**********************************
+  public static final String NODEJS_BUNDLE_REPO_URL = 'NODEJS_BUNDLE_REPO_URL'
+  public static final String NPM_RELEASE_REPO_URL = 'NPM_RELEASE_REPO_URL'
 
   //******************
   //**  Credentials **
