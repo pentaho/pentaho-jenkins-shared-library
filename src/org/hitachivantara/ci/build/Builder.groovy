@@ -48,4 +48,10 @@ interface Builder {
    * @return a closure execution for sonar analysis
    */
   Closure getSonarExecution()
+
+  /**
+   * For frogbot execution
+   * @return a closure execution for frogbot pull request analysis
+   */
+  Closure getFrogbotExecution()
 }

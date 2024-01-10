@@ -24,30 +24,29 @@ import static org.hitachivantara.ci.config.LibraryProperties.RUN_SONARQUBE
 import static org.hitachivantara.ci.config.LibraryProperties.STAGE_LABEL_AUDIT
 import static org.hitachivantara.ci.config.LibraryProperties.RUN_BUILDS
 import static org.hitachivantara.ci.config.LibraryProperties.RUN_CHECKOUTS
+import static org.hitachivantara.ci.config.LibraryProperties.RUN_FROGBOT
 
 // must be power of 2
 @Field int DEPENDENCY_CHECK = 0x1
 @Field int NEXUS_IQ_SCAN = 0x2
 @Field int SONARQUBE = 0x4
-@Field int ALL = DEPENDENCY_CHECK | NEXUS_IQ_SCAN | SONARQUBE
+@Field int FROGBOT = 0x8
+@Field int ALL = DEPENDENCY_CHECK | NEXUS_IQ_SCAN | SONARQUBE | FROGBOT
 
 
 def call() {
   BuildData buildData = BuildData.instance
-  if (buildData.runAudit) {
-    utils.timer(
-      {
-        runStage(buildData, getEnabledScanners(buildData))
-      },
-      { long duration ->
-        buildData.time(STAGE_LABEL_AUDIT, duration)
-        log.info "${STAGE_LABEL_AUDIT} completed in ${TimeCategory.minus(new Date(duration), new Date(0))}"
-      }
-    )
-  } else {
-    utils.createStageSkipped(STAGE_LABEL_AUDIT)
-    buildData.time(STAGE_LABEL_AUDIT, 0)
-  }
+
+  utils.timer(
+    {
+      runStage(buildData, getEnabledScanners(buildData))
+    },
+    { long duration ->
+      buildData.time(STAGE_LABEL_AUDIT, duration)
+      log.info "${STAGE_LABEL_AUDIT} completed in ${TimeCategory.minus(new Date(duration), new Date(0))}"
+    }
+  )
+
 }
 
 int getEnabledScanners(BuildData buildData) {
@@ -56,6 +55,7 @@ int getEnabledScanners(BuildData buildData) {
   enabledScanners |= buildData.getBool(RUN_DEPENDENCY_CHECK) ? DEPENDENCY_CHECK : 0
   enabledScanners |= buildData.getBool(RUN_NEXUS_LIFECYCLE) ? NEXUS_IQ_SCAN : 0
   enabledScanners |= buildData.getBool(RUN_SONARQUBE) ? SONARQUBE : 0
+  enabledScanners |= buildData.getBool(RUN_FROGBOT) && buildData.isPullRequest() ? FROGBOT : 0
   return enabledScanners
 }
 
@@ -135,6 +135,9 @@ Map<String, Closure> getEntries(BuildData buildData, JobItem jobItem, int enable
   if (enabledScanners & SONARQUBE) {
     scanners << [(jobItem.jobID + ': SonarQube'): { -> sonar(buildData, jobItem) }]
   }
+  if (enabledScanners & FROGBOT) {
+    scanners << [(jobItem.jobID + ': Frogbot'): { -> frogbot(buildData, jobItem) }]
+  }
 
   return scanners
 }
@@ -184,4 +187,31 @@ void nexusIQScan(/*BuildData buildData, JobItem jobItem*/) {
 void dependencyCheck(/*BuildData buildData, JobItem jobItem*/) {
   //TODO
   log.warn "Not implemented yet"
+}
+
+/**
+ * Perform frogobot's pull request analysis
+ *
+ * @param buildData
+ * @param jobItem
+ */
+void frogbot(BuildData buildData, JobItem jobItem) {
+  Builder builder = BuilderFactory.builderFor(jobItem)
+  Closure execution = builder.frogbotExecution
+
+  // apply retries
+  if (buildData.getInt(BUILD_RETRIES)) {
+    Closure current = execution
+    execution = { -> retry(buildData.getInt(BUILD_RETRIES), current) }
+  }
+
+  // apply container
+  if (jobItem.containerized) {
+    Closure current = execution
+    execution = { -> utils.withContainer(jobItem.dockerImage, current) }
+  }
+
+  utils.timer(execution) { long duration ->
+    buildData.time(STAGE_LABEL_AUDIT, jobItem.jobID + ': Frogbot', duration)
+  }
 }

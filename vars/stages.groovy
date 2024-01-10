@@ -315,6 +315,26 @@ void sonar(String id = 'sonar', String label = '') {
   ).run()
 }
 
+void frogbot(String id = 'frogbot', String label = '') {
+  new ParallelItemWorkStage(id: id, label: label ?: id.capitalize(),
+      ignoreGroups: true,
+      allowMinions: true,
+      itemFilter: { List<JobItem> items ->
+        BuilderUtils.applyChanges(id, items)
+        items.findAll { JobItem item -> !item.skip && item.auditable }
+      },
+      itemExecution: { JobItem item ->
+        BuilderFactory.builderFor(id, item)
+            .getFrogbotExecution()
+            .call()
+      }
+  ).run()
+}
+
+void scans() {
+  audit.call()
+}
+
 void report() {
   new SimpleStage(id: 'report', label: STAGE_LABEL_REPORT,
     body: {

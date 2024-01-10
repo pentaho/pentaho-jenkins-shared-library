@@ -211,7 +211,7 @@ class GitHubManager implements Serializable {
       GitHubPullRequest pullRequest = repository.getPullRequest(prNumber)
 
       // minimize previous comments
-      List<IssueComment> comments = pullRequest.comments.findAll { issueComment -> issueComment.viewerDidAuthor & !issueComment.isMinimized }
+      List<IssueComment> comments = pullRequest.comments.findAll { issueComment -> !issueComment.body.contains('frogbot') & issueComment.viewerDidAuthor & !issueComment.isMinimized }
       comments.each { IssueComment comment ->
         comment.hide(GitHubMinimizeContentReason.OUTDATED)
       }

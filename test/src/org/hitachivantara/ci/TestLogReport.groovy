@@ -130,8 +130,8 @@ class TestLogReport extends BasePipelineSpecification {
     setup:
       LogReport report = new LogReport(mockScript)
 
-      configRule.time('Audit', 100000)
-      configRule.time('Audit', 'my custom item ID', 100000)
+      configRule.time('Scans', 100000)
+      configRule.time('Scans', 'my custom item ID', 100000)
 
     when:
       report.build(configRule.buildData)
@@ -143,7 +143,7 @@ class TestLogReport extends BasePipelineSpecification {
         'Warnings:\n' +
         '  No warnings\n' +
         'Timings:\n' +
-        '  [Audit] (1m 40s)\n' +
+        '  [Scans] (1m 40s)\n' +
         '    my custom item ID : 1m 40s\n' +
         'Releases:\n' +
         '  No releases'

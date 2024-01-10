@@ -11,6 +11,7 @@ class IssueComment implements Serializable {
   Boolean isMinimized
   Boolean viewerDidAuthor
   GitHubMinimizeContentReason minimizedReason
+  String body
 
   /** Minimizes a comment on an Issue, Commit, Pull Request, or Gist
    * @param reason The reason why to minimize

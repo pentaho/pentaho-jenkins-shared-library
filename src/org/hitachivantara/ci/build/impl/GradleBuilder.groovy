@@ -79,6 +79,12 @@ class GradleBuilder extends AbstractBuilder implements Serializable {
     return getGradleDsl(gradleCommand)
   }
 
+  @Override
+  Closure getFrogbotExecution() {
+    // not implemented
+    return { -> }
+  }
+
   Closure getGradleDsl(String cmd) {
     String localRepoPath = "${buildData.getString(LIB_CACHE_ROOT_PATH)}/gradle"
 

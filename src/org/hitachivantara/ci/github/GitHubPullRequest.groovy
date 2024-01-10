@@ -29,6 +29,7 @@ class GitHubPullRequest implements Serializable {
                     isMinimized
                     viewerDidAuthor
                     minimizedReason
+                    body
                   }
                 }
               }
@@ -48,6 +49,7 @@ class GitHubPullRequest implements Serializable {
           it.id = issueComment.id
           it.isMinimized = issueComment.isMinimized
           it.viewerDidAuthor = issueComment.viewerDidAuthor
+          it.body = issueComment.body
           if (reason) {
             it.minimizedReason = GitHubMinimizeContentReason.valueOf(reason.toUpperCase())
           }

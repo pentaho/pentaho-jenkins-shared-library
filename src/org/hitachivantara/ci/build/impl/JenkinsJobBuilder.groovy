@@ -101,4 +101,11 @@ class JenkinsJobBuilder extends AbstractBuilder implements IBuilder, Serializabl
     // not implemented
     return { -> }
   }
+
+  @Override
+  Closure getFrogbotExecution() {
+    // not implemented
+    return { -> }
+  }
+
 }
