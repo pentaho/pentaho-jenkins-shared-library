@@ -27,6 +27,7 @@ import static org.hitachivantara.ci.GroovyUtils.intersect
 import static org.hitachivantara.ci.FileUtils.isChild
 import static org.hitachivantara.ci.build.helper.BuilderUtils.process
 import static org.hitachivantara.ci.FileUtils.resolve
+import static org.hitachivantara.ci.build.helper.BuilderUtils.processOutput
 import static org.hitachivantara.ci.config.LibraryProperties.ARTIFACTORY_BASE_URL
 import static org.hitachivantara.ci.config.LibraryProperties.ARTIFACT_DEPLOYER_CREDENTIALS_ID
 import static org.hitachivantara.ci.config.LibraryProperties.SCM_API_TOKEN_CREDENTIALS_ID
@@ -98,6 +99,7 @@ class MavenBuilder extends AbstractBuilder implements IBuilder, Serializable {
     return { ->
       steps.dir(item.buildWorkDir) {
         steps.withEnv([
+            "RESOLVE_REPO_MIRROR=${resolveRepo}",
             "JF_URL=${artifactoryURL}",
             "JF_GIT_PROVIDER=${gitProvider}",
             "JF_GIT_REPO=${gitRepo}",
@@ -106,9 +108,13 @@ class MavenBuilder extends AbstractBuilder implements IBuilder, Serializable {
         ]) {
           steps.withCredentials([steps.usernamePassword(credentialsId: deployCredentials,
               usernameVariable: 'JF_USER', passwordVariable: 'JF_PASSWORD'),
+                                 steps.usernamePassword(credentialsId: deployCredentials,
+                                     usernameVariable: 'NEXUS_DEPLOY_USER', passwordVariable: 'NEXUS_DEPLOY_PASSWORD'),
                                  steps.string(credentialsId: scmApiTokenCredential, variable: 'JF_GIT_TOKEN')]) {
 
-            //String localSettingsFile = item.settingsFile ?: settingsFile
+            String localSettingsFile = item.settingsFile ?: settingsFile
+            processOutput("mkdir -p \$HOME/.m2/ && cp ${localSettingsFile } \$HOME/.m2/settings.xml", steps)
+            steps.log.info "Copied ${localSettingsFile} into \$HOME/.m2/"
 
             steps.log.info "Running /opt/frogbot scan-pull-request"
             if (item.containerized) {
