@@ -101,4 +101,11 @@ class DSLScriptBuilder extends AbstractBuilder implements IBuilder, Serializable
     // not implemented
     return { -> }
   }
+
+  @Override
+  Closure getFrogbotExecution() {
+    // not implemented
+    return { -> }
+  }
+
 }

@@ -27,6 +27,7 @@ import static org.hitachivantara.ci.GroovyUtils.intersect
 import static org.hitachivantara.ci.FileUtils.isChild
 import static org.hitachivantara.ci.build.helper.BuilderUtils.process
 import static org.hitachivantara.ci.FileUtils.resolve
+import static org.hitachivantara.ci.config.LibraryProperties.ARTIFACTORY_BASE_URL
 import static org.hitachivantara.ci.config.LibraryProperties.ARTIFACT_DEPLOYER_CREDENTIALS_ID
 import static org.hitachivantara.ci.config.LibraryProperties.SCM_API_TOKEN_CREDENTIALS_ID
 import static org.hitachivantara.ci.config.LibraryProperties.BRANCH_NAME
@@ -76,6 +77,47 @@ class MavenBuilder extends AbstractBuilder implements IBuilder, Serializable {
     String mvnCommand = analyser.getCommand()
     steps.log.info "Maven SonarAnalyser directives for ${item.jobID}: $mvnCommand"
     return getMvnDsl(mvnCommand)
+  }
+
+  @Override
+  Closure getFrogbotExecution() {
+    // Frogbot will only run on a PR
+    if (!buildData.isPullRequest()) {
+      steps.log.info "This is not a Pull Request build! Skipping..."
+      return { -> }
+    }
+
+    String artifactoryURL = buildData.getString(ARTIFACTORY_BASE_URL)
+    String gitProvider = "github"
+    String gitRepo = item.scmInfo.repository
+    String gitOwner = item.scmInfo.organization
+    String gitPrNbr = buildData.get(CHANGE_ID)
+    String deployCredentials = buildData.getString(ARTIFACT_DEPLOYER_CREDENTIALS_ID)
+    String scmApiTokenCredential = buildData.getString(SCM_API_TOKEN_CREDENTIALS_ID)
+
+    return { ->
+      steps.dir(item.buildWorkDir) {
+        steps.withEnv([
+            "JF_URL=${artifactoryURL}",
+            "JF_GIT_PROVIDER=${gitProvider}",
+            "JF_GIT_REPO=${gitRepo}",
+            "JF_GIT_PULL_REQUEST_ID=${gitPrNbr}",
+            "JF_GIT_OWNER=${gitOwner}"
+        ]) {
+          steps.withCredentials([steps.usernamePassword(credentialsId: deployCredentials,
+              usernameVariable: 'JF_USER', passwordVariable: 'JF_PASSWORD'),
+                                 steps.string(credentialsId: scmApiTokenCredential, variable: 'JF_GIT_TOKEN')]) {
+
+            //String localSettingsFile = item.settingsFile ?: settingsFile
+
+            steps.log.info "Running /opt/frogbot scan-pull-request"
+            if (item.containerized) {
+              process("/opt/frogbot scan-pull-request", steps)
+            }
+          }
+        }
+      }
+    }
   }
 
   @Override

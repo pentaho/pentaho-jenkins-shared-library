@@ -61,8 +61,8 @@ class GitHubPullRequestTest extends BasePipelineSpecification {
   def "test commentPullRequest"() {
     given:
       GitHubPullRequest pullRequest = new GitHubPullRequest(comments: [
-        new IssueComment(id: '1', isMinimized: false, viewerDidAuthor: true),
-        new IssueComment(id: '2', isMinimized: false, viewerDidAuthor: false),
+        new IssueComment(id: '1', isMinimized: false, viewerDidAuthor: true, body: 'something'),
+        new IssueComment(id: '2', isMinimized: false, viewerDidAuthor: false, body: 'also something'),
       ])
       replacements.addReplacement(GitHubPullRequest, ['static.get': { String owner, String name, Integer number -> pullRequest }])
       replacements.addReplacement(GitHubManager, [

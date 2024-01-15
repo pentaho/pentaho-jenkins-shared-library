@@ -131,6 +131,12 @@ class AntBuilder extends AbstractBuilder implements IBuilder, Serializable {
     return { -> }
   }
 
+  @Override
+  Closure getFrogbotExecution() {
+    // not implemented
+    return { -> }
+  }
+
   private Closure getAntDsl(JobItem jobItem, String antCmd) {
     Map buildProperties = buildData.getBuildProperties()
 

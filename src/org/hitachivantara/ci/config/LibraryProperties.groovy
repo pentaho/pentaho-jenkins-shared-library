@@ -84,6 +84,7 @@ class LibraryProperties implements Serializable {
   public static final String RUN_NEXUS_LIFECYCLE = 'RUN_NEXUS_LIFECYCLE'
   public static final String RUN_DEPENDENCY_CHECK = 'RUN_DEPENDENCY_CHECK'
   public static final String RUN_SONARQUBE = 'RUN_SONARQUBE'
+  public static final String RUN_FROGBOT = 'RUN_FROGBOT'
 
   public static final String PUSH_CHANGES = 'PUSH_CHANGES'
   public static final String PARALLEL_SIZE = 'PARALLEL_SIZE'
@@ -154,7 +155,7 @@ class LibraryProperties implements Serializable {
   public static final String STAGE_LABEL_CHECKOUT = 'Checkout'
   public static final String STAGE_LABEL_VERSIONING = 'Version'
   public static final String STAGE_LABEL_BUILD = 'Build'
-  public static final String STAGE_LABEL_AUDIT = 'Audit'
+  public static final String STAGE_LABEL_AUDIT = 'Scans'
   public static final String STAGE_LABEL_UNIT_TEST = 'Test'
   public static final String STAGE_LABEL_PUSH = 'Push'
   public static final String STAGE_LABEL_TAG = 'Tag'
@@ -235,4 +236,7 @@ class LibraryProperties implements Serializable {
   public static final String LOGS_TO_KEEP = 'LOGS_TO_KEEP'
   public static final String ARTIFACTS_TO_KEEP = 'ARTIFACTS_TO_KEEP'
   public static final String DISABLE_CONCURRENT_BUILDS = 'DISABLE_CONCURRENT_BUILDS'
+
+  public static final String ARTIFACTORY_BASE_URL = 'ARTIFACTORY_BASE_URL'
+
 }
