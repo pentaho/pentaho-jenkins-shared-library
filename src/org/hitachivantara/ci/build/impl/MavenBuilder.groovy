@@ -118,7 +118,7 @@ class MavenBuilder extends AbstractBuilder implements IBuilder, Serializable {
 
             steps.log.info "Running /opt/frogbot scan-pull-request"
             if (item.containerized) {
-              process("/opt/frogbot scan-pull-request --mvn", steps)
+              process("/opt/frogbot scan-pull-request", steps)
             }
           }
         }
