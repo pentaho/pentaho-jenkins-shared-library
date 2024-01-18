@@ -104,7 +104,8 @@ class MavenBuilder extends AbstractBuilder implements IBuilder, Serializable {
             "JF_GIT_PROVIDER=${gitProvider}",
             "JF_GIT_REPO=${gitRepo}",
             "JF_GIT_PULL_REQUEST_ID=${gitPrNbr}",
-            "JF_GIT_OWNER=${gitOwner}"
+            "JF_GIT_OWNER=${gitOwner}",
+            "MAVEN_ARGS=-V -s ${localSettingsFile} -Dmaven.repo.local='${localRepoPath}' -DnodeDownloadRoot='${nodeDownloadRoot}' -DnpmDownloadRoot='${npmDownloadRoot}'"
         ]) {
           steps.withCredentials([steps.usernamePassword(credentialsId: deployCredentials,
               usernameVariable: 'JF_USER', passwordVariable: 'JF_PASSWORD'),
@@ -112,9 +113,9 @@ class MavenBuilder extends AbstractBuilder implements IBuilder, Serializable {
                                      usernameVariable: 'NEXUS_DEPLOY_USER', passwordVariable: 'NEXUS_DEPLOY_PASSWORD'),
                                  steps.string(credentialsId: scmApiTokenCredential, variable: 'JF_GIT_TOKEN')]) {
 
-            String localSettingsFile = item.settingsFile ?: settingsFile
-            processOutput("mkdir -p \$HOME/.m2/ && cp ${localSettingsFile } \$HOME/.m2/settings.xml", steps)
-            steps.log.info "Copied ${localSettingsFile} into \$HOME/.m2/"
+            //String localSettingsFile = item.settingsFile ?: settingsFile
+            //processOutput("mkdir -p \$HOME/.m2/ && cp ${localSettingsFile } \$HOME/.m2/settings.xml", steps)
+            //steps.log.info "Copied ${localSettingsFile} into \$HOME/.m2/"
 
             steps.log.info "Running /opt/frogbot scan-pull-request"
             if (item.containerized) {
