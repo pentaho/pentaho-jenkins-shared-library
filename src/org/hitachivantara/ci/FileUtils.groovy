@@ -36,12 +36,13 @@ class FileUtils {
    * @param excludesPattern an exclusion pattern to ignore files
    * @return
    */
-  @NonCPS
-  static List<String> findFiles(String rootFolderPath, String artifactPattern, String excludesPattern = null) {
+  //@NonCPS
+  static List<String> findFiles(def dsl, String rootFolderPath, String artifactPattern, String excludesPattern = null) {
 
     List<String> artifactPaths = []
 
     if (!artifactPattern) {
+      dsl.log.info "No pattern defined!!!"
       return artifactPaths
     }
 
@@ -62,13 +63,36 @@ class FileUtils {
     if (excludesPattern) {
       excludeMatcher = fs.getPathMatcher(excludesPattern)
     }
-
+    File rootFolder2 = new File(rootFolderPath)
+    dsl.log.info "rootFolder2.exists() " + rootFolder2.exists()
+    dsl.log.info "rootFolder2 props) " + rootFolder2.getProperties()
     if (!rootFolderPath.endsWith(File.separator)) {
       rootFolderPath = rootFolderPath + File.separator
     }
-
+    dsl.log.info "rootFolderPath is ${rootFolderPath}"
     File rootFolder = new File(rootFolderPath)
-    if (rootFolder.exists()) {
+    dsl.log.info "rootFolder.exists() " + rootFolder.exists()
+    dsl.log.info "rootFolder.getAbsoluteFile().exists() " + rootFolder.getAbsoluteFile().exists()
+    dsl.log.info "Files.exists(Paths.get(rootFolderPath)) " + Files.exists(Paths.get(rootFolderPath))
+    dsl.sh "whoami"
+    dsl.sh "ls -la ${rootFolderPath}"
+    dsl.log.info "Files.isReadable(Paths.get(rootFolderPath)) " + Files.isReadable(Paths.get(rootFolderPath))
+    dsl.log.info "Files.isDirectory(Paths.get(rootFolderPath)) " + Files.isDirectory(Paths.get(rootFolderPath))
+    dsl.log.info "Files.isSymbolicLink(Paths.get(rootFolderPath)) " + Files.isSymbolicLink(Paths.get(rootFolderPath))
+
+    dsl.sh 'printenv'
+    dsl.log.info "System.getenv() " + System.getenv()
+    dsl.log.info "System.getProperties() " + System.getProperties()
+
+    dsl.log.info "dsl.fileExists rootFolderPath"
+    if ( dsl.fileExists(rootFolderPath) ) {
+      dsl.log.info "dsl.fileExists true"
+    } else {
+      dsl.log.info "dsl.fileExists false"
+    }
+
+    if ( dsl.fileExists(rootFolderPath) ) { //if (rootFolder.exists()) {
+      dsl.log.info "rootFolder exists"
       rootFolder.traverse(type: FileType.FILES, preDir: {
         File file ->
 
@@ -86,7 +110,11 @@ class FileUtils {
         artifactPaths << file.getAbsolutePath().toString()
       }
     }
+    else {
+      dsl.log.info "rootFolder does not exist!!!"
+    }
 
+    dsl.log.info "Returning ${artifactPaths}"
     return artifactPaths?.unique()
   }
 

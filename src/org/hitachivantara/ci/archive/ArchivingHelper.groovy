@@ -173,9 +173,9 @@ Starting search at '${rootFolder}' with:
 - exclusion pattern: ${logExclusionPattern} 
 - pattern: ${logPattern}
 """
-    List<String> artifactPaths = FileUtils.findFiles(rootFolder, "regex:${pattern}", exclusionPattern)
+    List<String> artifactPaths = FileUtils.findFiles(dsl, rootFolder, "regex:${pattern}", exclusionPattern)
 
-    if (!artifactPaths.isEmpty()) {
+    if (artifactPaths && !artifactPaths.isEmpty()) {
       final String logArtifactPaths = simplifyLogEntries(rootFolder, artifactPaths.toString(), ', ')
       dsl.log.info """
 Archiving artifacts by copying them to '${targetFolder}':
