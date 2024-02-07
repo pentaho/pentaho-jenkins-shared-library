@@ -47,6 +47,7 @@ class LibraryProperties implements Serializable {
   public static final String ARCHIVING_CONFIG = 'ARCHIVING_CONFIG'
   public static final String ARCHIVING_PATH_GROUP_REGEX = 'ARCHIVING_PATH_GROUP_REGEX'
   public static final String ARCHIVE_TO_JENKINS_MASTER = 'ARCHIVE_TO_JENKINS_MASTER'
+  public static final String HOST_ARTIFACTS = 'HOST_ARTIFACTS'
 
 
   //***********************************
@@ -166,6 +167,7 @@ class LibraryProperties implements Serializable {
   public static final String STAGE_LABEL_PRE_BUILD = 'Pre Build'
   public static final String STAGE_LABEL_POST_BUILD = 'Post Build'
   public static final String STAGE_LABEL_COLLECT_JOB_DATA = 'Collect Job Data'
+  public static final String STAGE_HOST_ARTIFACTS = 'Host Artifacts'
 
   //*******************
   //** Pull Requests **

@@ -39,6 +39,7 @@ import static org.hitachivantara.ci.config.LibraryProperties.STAGE_NAME
 import static org.hitachivantara.ci.config.LibraryProperties.TAG_SKIP_SNAPSHOT
 import static org.hitachivantara.ci.config.LibraryProperties.USE_MINION_JOBS
 import static org.hitachivantara.ci.config.LibraryProperties.USE_MINION_MULTIBRANCH_JOBS
+import static org.hitachivantara.ci.config.LibraryProperties.HOST_ARTIFACTS
 
 class BuildData implements Serializable {
 
@@ -195,6 +196,10 @@ class BuildData implements Serializable {
 
   Boolean isRunArchiving() {
     !getBool(NOOP) && !getBool(USE_MINION_MULTIBRANCH_JOBS) && getBool(ARCHIVE_ARTIFACTS)
+  }
+
+  Boolean isRunHosted() {
+    !getBool(NOOP) && !getBool(USE_MINION_MULTIBRANCH_JOBS) && getBool(HOST_ARTIFACTS)
   }
 
   /****************************************/

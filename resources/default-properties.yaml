@@ -200,3 +200,4 @@ DISABLE_CONCURRENT_BUILDS: false
 
 # Artifacts
 ARTIFACTORY_BASE_URL: https://one.hitachivantara.com
+ARTIFACTORY_BASE_API_URL: ${ARTIFACTORY_BASE_URL}/artifactory

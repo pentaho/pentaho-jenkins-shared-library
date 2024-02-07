@@ -357,3 +357,11 @@ void collectJobData() {
       }
   ).run()
 }
+
+void hosting(String id = 'hosting', String label = '') {
+  new SimpleStage(id: id, label: label ?: id.capitalize(),
+      body: {
+        hostedStage.call()
+      }
+  ).run()
+}
