@@ -112,23 +112,14 @@ class HostedArtifactsManager implements Serializable {
         user = credential.getUsername()
         String password = credential.getPassword().getPlainText()
 
-        artifactsMetadata = new Artifactory(dsl, artifactoryURL, user, password, "").searchArtifacts(getFileNames())
+        artifactsMetadata = new Artifactory(dsl, artifactoryURL, user, password).searchArtifacts(getFileNames())
 
       } catch (Exception e) {
         dsl.log.info "9999999999 $e"
       }
 
-
-      dsl.log.info "9999999999 $user"
-      //artifactsMetadata = new Artifactory(artifactoryURL, user, password, "" ).searchArtifacts(getFileNames())
-
-      /* dsl.withCredentials([steps.usernamePassword(credentialsId: deployCredentials,
-           usernameVariable: 'RT_USER', passwordVariable: 'RT_PASSWORD')]) {
-         dsl.log.info "************** vitor"
-         dsl.log.info "************** \$RT_USER"
-         //artifactsMetadata = new Artifactory(artifactoryURL, "\$RT_USER", "\$RT_PASSWORD", "" ).searchArtifacts(getFileNames())
-       }*/
-
+      dsl.log.info "888888888888"
+      dsl.log.info artifactsMetadata?.size()
       if (artifactsMetadata?.size() > 0) {
         createHtmlIndex(artifactsMetadata, hostedRoot)
       } else {
@@ -148,19 +139,23 @@ class HostedArtifactsManager implements Serializable {
   }
 
   def createHtmlIndex(List<Map> artifactsMetadata, String hostedRootFolder) {
+    dsl.log.info "99999"
     String template = dsl.libraryResource resource: "templates/hosted/artifacts.vm", encoding: 'UTF-8'
-
-    bindings = [
+    dsl.log.info "777777777"
+    Map bindings = [
         files: artifactsMetadata
     ]
-
+    dsl.log.info "66666666"
     def index = dsl.resolveTemplate(
         text: template,
         parameters: bindings
     )
+    dsl.log.info("###############")
+    dsl.log.info("$index")
+    dsl.log.info("${hostedRootFolder}/index.html")
+    dsl.writeFile file: "${hostedRootFolder}/index.html", text: index
 
-    def cmd = "echo ${index} >> ${hostedRootFolder}/index.html"
-    dsl.sh(cmd)
+    dsl.log.info(ddd)
   }
 
   List<String> getFileNames() {
