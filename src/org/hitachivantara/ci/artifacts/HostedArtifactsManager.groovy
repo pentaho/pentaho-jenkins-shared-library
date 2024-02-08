@@ -9,6 +9,7 @@ import org.hitachivantara.ci.FileUtils
 import org.hitachivantara.ci.config.BuildData
 
 import java.nio.file.Paths
+import java.text.DecimalFormat
 
 import static org.hitachivantara.ci.config.LibraryProperties.*
 
@@ -93,7 +94,6 @@ class HostedArtifactsManager implements Serializable {
  * Looks for the artifacts and does the actual archiving
  */
   void hostArtifacts() {
-    dsl.log.info "************** hostArtifacts"
     String hostedRoot = getHostedRoot(this.buildData)
     if (!hostedRoot) {
       dsl.log.warn "Not able to determine where to create hosted page!"
@@ -101,24 +101,20 @@ class HostedArtifactsManager implements Serializable {
     } else {
       String deployCredentials = buildData.getString(ARTIFACT_DEPLOYER_CREDENTIALS_ID)
       String artifactoryURL = buildData.getString('ARTIFACTORY_BASE_API_URL')
-      dsl.log.info "*** $artifactoryURL"
-      
+
       List<Map> artifactsMetadata = []
-      dsl.log.info "************** $artifactoryURL"
-      dsl.log.info "************** $deployCredentials"
-      String user = "cardoso"
+
       try {
         def credential = lookupSystemCredentials(deployCredentials)
-        user = credential.getUsername()
+        String user = credential.getUsername()
         String password = credential.getPassword().getPlainText()
 
         artifactsMetadata = new Artifactory(dsl, artifactoryURL, user, password).searchArtifacts(getFileNames())
 
       } catch (Exception e) {
-        dsl.log.info "9999999999 $e"
+        dsl.log.info "$e"
       }
 
-      dsl.log.info "888888888888"
       dsl.log.info artifactsMetadata?.size()
       if (artifactsMetadata?.size() > 0) {
         createHtmlIndex(artifactsMetadata, hostedRoot)
@@ -139,29 +135,31 @@ class HostedArtifactsManager implements Serializable {
   }
 
   def createHtmlIndex(List<Map> artifactsMetadata, String hostedRootFolder) {
-    dsl.log.info "99999"
     String template = dsl.libraryResource resource: "templates/hosted/artifacts.vm", encoding: 'UTF-8'
-    dsl.log.info "777777777"
+    String currentDate = String.format('%tF %<tH:%<tM', java.time.LocalDateTime.now())
+
     Map bindings = [
-        files: artifactsMetadata
+        files: artifactsMetadata,
+        buildHeaderInfo: "Build ${buildData.getString(RELEASE_BUILD_NUMBER)} | ${currentDate}",
+        artifatoryURL: buildData.getString('MAVEN_RESOLVE_REPO_URL'),
+        numberFormat: new DecimalFormat("###,##0.000")
     ]
-    dsl.log.info "66666666"
-    def index = dsl.resolveTemplate(
+
+    String index = dsl.resolveTemplate(
         text: template,
         parameters: bindings
     )
-    dsl.log.info("###############")
-    dsl.log.info("$index")
-    dsl.log.info("${hostedRootFolder}/index.html")
+    //String headerLocation = dsl.libraryResource resource: "templates/hosted/header", encoding: 'UTF-8'
+    //String header = dsl.readFile(file: headerLocation, encoding: 'UTF-8') as String
+
     dsl.writeFile file: "${hostedRootFolder}/index.html", text: index
 
     dsl.log.info(ddd)
   }
 
   List<String> getFileNames() {
-    dsl.log.info("111111111")
     Map props = loadVersionsFromFile()
-    dsl.log.info("2222222222")
+
     props << buildData.buildProperties.collectEntries { k, v ->
       [(k): v ?: '']
     }

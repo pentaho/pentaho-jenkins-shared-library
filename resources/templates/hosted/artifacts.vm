@@ -1,19 +1,45 @@
-<table cellspacing="0" cellpadding="0" border="0">
+<style>
+  body, html {
+      background-color: #2d2d2d;
+      font-family: Arial;
+      font-size: 15px;
+      color: #4AF626;
+    }
+    table {
+      border-spacing: 10px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    th {
+      border-bottom: dashed 1px white;
+      color: white;
+    }
+    a {
+      font-family: Arial;
+      font-size: 15px;
+      color: #4AF626;
+    }
+</style>
+
+<table border="0">
   <tr>
-    <th class="Title" bgcolor="${tableHeaderBackColor}" align="left" width=500>buildHeaderInfo.toString()</th>
-    <th class="Title" bgcolor="${tableHeaderBackColor}" align="center" width=90>OS</th>
-    <th class="Title" bgcolor="${tableHeaderBackColor}" align="center" width=90>Type</th>
-    <th class="Title" bgcolor="${tableHeaderBackColor}" align="center" width=90>Size</th>
-    <th class="Title" bgcolor="${tableHeaderBackColor}" align="center" width=90>Checksums&nbsp;</th>
+    <th align="left" width=500>$buildHeaderInfo</th>
+    <th align="center" width=90>OS</th>
+    <th align="center" width=90>Type</th>
+    <th align="center" width=90>Size (MB)</th>
+    <th align="center" width=90>Checksums&nbsp;</th>
+    <th style="border-bottom: 0px;"></th>
   </tr>
 
 #foreach ($file in $files )
+  #set ($fileSize = $numberFormat.format( $file.size / 1024.00 / 1024.00) )
   <tr>
-    <td class="Item" align="left"><a href="${file.path}">${file.name}</a></td>
-    <td class="Item" align="center">${osName}</td>
-    <td class="Item" align="center">${fileType}</td>
-    <td class="Item" align="center">${fileSize}</td>
-    <td class="Item" align="center"><a href="${checksumsUrl}">sums</a></td>
+    <td align="left"><a href="${artifatoryURL}${file.path}/${file.name}" target="_new">${file.name}</a></td>
+    <td align="center">${osName}</td>
+    <td align="center">${file.type}</td>
+    <td align="right">$fileSize</td>
+    <td align="left">SHA1=<b>${file.actual_sha1}</b></td>
+    <td><a title="Copy to the Clipboard" href="javascript:navigator.clipboard.writeText('${file.actual_sha1}');">&#128203;</a></td>
   </tr>
 #end
 

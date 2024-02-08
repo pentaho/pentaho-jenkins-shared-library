@@ -32,19 +32,16 @@ class Artifactory {
     }
     sb << ']'
     sb << '})'
-    sb << '.include("repo", "path", "name", "actual_md5", "actual_sha1")'
+    sb << '.include("repo", "path", "name", "actual_md5", "actual_sha1", "sha256", "size", "type")'
 
-    dsl.log.debug(sb.toString())
-
-    aql(sb.toString())?.results ?: [] as List<Map>
+    Map aql = aql(sb.toString())
+    aql?.results as List<Map> ?: []
   }
 
-  def aql(String query) {
+  Map aql(String query) {
     def url = baseUrl.newBuilder('api/search/aql').build()
-
     def result = dsl.sh(script: "curl -L -u '$rtUsername:$rtPassword' -k -X POST -H 'Content-Type:text/plain' $url -d '$query'", returnStdout: true).trim()
-    dsl.log.info("*****")
-    dsl.log.info(result)
+
     return JsonUtils.toObject(result as String) as Map
   }
 
