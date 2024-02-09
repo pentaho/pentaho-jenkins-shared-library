@@ -149,10 +149,13 @@ class HostedArtifactsManager implements Serializable {
         text: template,
         parameters: bindings
     )
-    //String headerLocation = dsl.libraryResource resource: "templates/hosted/header", encoding: 'UTF-8'
-    //String header = dsl.readFile(file: headerLocation, encoding: 'UTF-8') as String
+    String header = dsl.libraryResource resource: "templates/hosted/header", encoding: 'UTF-8'
 
-    dsl.writeFile file: "${hostedRootFolder}/index.html", text: index
+    dsl.log.info(header)
+
+    String content = new StringBuilder(header).append(index)
+
+    dsl.writeFile file: "${hostedRootFolder}/index.html", text: content.toString()
 
     dsl.log.info(ddd)
   }
