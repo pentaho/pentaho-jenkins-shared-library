@@ -18,29 +18,30 @@ class Artifactory {
     this.rtPassword = rtPassword
   }
 
-  List<Map> searchArtifacts(List<String> filenames) {
+  List<Map> searchArtifacts(List<String> filenames, final String pathMatch) {
 
     String repo = ''//baseUrl.pathSegments().last()
     def sb = "" << "items.find({"
     if (repo) sb << '"repo": "' << repo << '", '
-    sb << '"type": "file", '
+    sb << '"type": "file", "path": {"\$match":"*/' << pathMatch << '"},'
     sb << '"$or": ['
     int lastIdx = filenames.size() - 1
     filenames.eachWithIndex { filename, idx ->
-      sb << '{"name": "' << filename << '"}'
+      sb << '{"name": {"\$match":"' << filename << '"}}'
       if (idx < lastIdx) sb << ', '
     }
     sb << ']'
     sb << '})'
     sb << '.include("repo", "path", "name", "actual_md5", "actual_sha1", "sha256", "size", "type")'
-
+    sb << '.sort({"\$desc" : ["created"]}).limit(1)' // only to return the very last snapshot - most recent
+    dsl.log.info sb.toString()
     Map aql = aql(sb.toString())
     aql?.results as List<Map> ?: []
   }
 
   Map aql(String query) {
     def url = baseUrl.newBuilder('api/search/aql').build()
-    def result = dsl.sh(script: "curl -L -u '$rtUsername:$rtPassword' -k -X POST -H 'Content-Type:text/plain' $url -d '$query'", returnStdout: true).trim()
+    def result = dsl.sh(script: "#!/bin/sh -e\n curl -L -u '$rtUsername:$rtPassword' -k -X POST -H 'Content-Type:text/plain' $url -d '$query'", returnStdout: true).trim()
 
     return JsonUtils.toObject(result as String) as Map
   }

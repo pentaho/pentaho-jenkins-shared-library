@@ -109,19 +109,24 @@ class HostedArtifactsManager implements Serializable {
         String user = credential.getUsername()
         String password = credential.getPassword().getPlainText()
 
-        artifactsMetadata = new Artifactory(dsl, artifactoryURL, user, password).searchArtifacts(getFileNames())
+        String pathMatcher = "${buildData.getString(RELEASE_VERSION)}-" << (isSnapshotBuild() ? "SNAPSHOT" : buildData.getString(BUILD_ID_TAIL))
+        artifactsMetadata = new Artifactory(dsl, artifactoryURL, user, password).searchArtifacts(getFileNames(), pathMatcher)
 
       } catch (Exception e) {
         dsl.log.info "$e"
       }
 
-      dsl.log.info artifactsMetadata?.size()
       if (artifactsMetadata?.size() > 0) {
         createHtmlIndex(artifactsMetadata, hostedRoot)
       } else {
         dsl.log.info "No artifacts were found in Artifactory!"
       }
     }
+  }
+
+  boolean isSnapshotBuild() {
+    // only way to try to undersatnt if it's a SNAPSHOT or Suite build
+    return buildData.getString(ARCHIVING_CONFIG)?.toLowerCase()?.indexOf("snapshot") > -1
   }
 
   def lookupSystemCredentials = { credentialsId ->
@@ -139,10 +144,10 @@ class HostedArtifactsManager implements Serializable {
     String currentDate = String.format('%tF %<tH:%<tM', java.time.LocalDateTime.now())
 
     Map bindings = [
-        files: artifactsMetadata,
+        files          : artifactsMetadata,
         buildHeaderInfo: "Build ${buildData.getString(RELEASE_BUILD_NUMBER)} | ${currentDate}",
-        artifatoryURL: buildData.getString('MAVEN_RESOLVE_REPO_URL'),
-        numberFormat: new DecimalFormat("###,##0.000")
+        artifatoryURL  : buildData.getString('MAVEN_RESOLVE_REPO_URL'),
+        numberFormat   : new DecimalFormat("###,##0.000")
     ]
     String index
 
@@ -151,7 +156,7 @@ class HostedArtifactsManager implements Serializable {
           text: template,
           parameters: bindings
       )
-    } catch(Exception e) {
+    } catch (Exception e) {
       dsl.log.error e
     }
     String header = dsl.libraryResource resource: "templates/hosted/header", encoding: 'UTF-8'
@@ -180,7 +185,7 @@ class HostedArtifactsManager implements Serializable {
         }
 
         if (properVersion) {
-          properVersion = properVersion.replace('BUILDTAG', buildData.getString(RELEASE_BUILD_NUMBER))
+          properVersion = properVersion.replace('BUILDTAG', '*').replace('SNAPSHOT', '*')
         }
 
         return properVersion

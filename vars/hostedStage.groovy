@@ -13,13 +13,12 @@ import static org.hitachivantara.ci.config.LibraryProperties.STAGE_HOST_ARTIFACT
 def call() {
   BuildData buildData = BuildData.instance
   Boolean ignoreFailures = buildData.getBool(IGNORE_PIPELINE_FAILURE)
-  log.info "00000000000 ${buildData.runHosted}"
+
   if (buildData.runHosted) {
     utils.timer(
         {
           utils.handleError(
               {
-                log.info "111111111"
                 new HostedArtifactsManager(this, buildData).hostArtifacts()
               },
               { Throwable e ->
