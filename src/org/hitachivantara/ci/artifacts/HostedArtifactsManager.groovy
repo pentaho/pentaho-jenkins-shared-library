@@ -144,20 +144,21 @@ class HostedArtifactsManager implements Serializable {
         artifatoryURL: buildData.getString('MAVEN_RESOLVE_REPO_URL'),
         numberFormat: new DecimalFormat("###,##0.000")
     ]
+    String index
 
-    String index = dsl.resolveTemplate(
-        text: template,
-        parameters: bindings
-    )
+    try {
+      index = dsl.resolveTemplate(
+          text: template,
+          parameters: bindings
+      )
+    } catch(Exception e) {
+      dsl.log.error e
+    }
     String header = dsl.libraryResource resource: "templates/hosted/header", encoding: 'UTF-8'
-
-    dsl.log.info(header)
 
     String content = new StringBuilder(header).append(index)
 
     dsl.writeFile file: "${hostedRootFolder}/index.html", text: content.toString()
-
-    dsl.log.info(ddd)
   }
 
   List<String> getFileNames() {
@@ -166,7 +167,7 @@ class HostedArtifactsManager implements Serializable {
     props << buildData.buildProperties.collectEntries { k, v ->
       [(k): v ?: '']
     }
-    dsl.log.info("3333333")
+
     return getArtifactsNames().collect {
       it.replaceAll(/\$\{(.*?)\}/) { m, k ->
 
