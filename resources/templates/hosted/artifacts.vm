@@ -1,8 +1,8 @@
 <style>
   body, html {
       background-color: #2d2d2d;
-      font-family: Arial;
-      font-size: 15px;
+      font-family: monospace;
+      font-size: 13px;
       color: #4AF626;
     }
     table {
@@ -15,15 +15,15 @@
       color: white;
     }
     a {
-      font-family: Arial;
-      font-size: 15px;
+      font-family: monospace;
+      font-size: 13px;
       color: #4AF626;
     }
 </style>
 
 <table border="0">
   <tr>
-    <th align="left" width=500>$buildHeaderInfo</th>
+    <th align="left">$buildHeaderInfo</th>
     <th align="center" width=90>OS</th>
     <th align="center" width=90>Size (MB)</th>
     <th align="center" width=90>Checksums&nbsp;</th>
@@ -42,6 +42,8 @@
   #end
   #if ($fileName.endsWith(".bin") && $osName != 'os x')
     #set ($osName = "unix")
+  #elseif ($fileName.endsWith(".exe"))
+    #set ($osName = "windows")
   #end
 
   <tr>

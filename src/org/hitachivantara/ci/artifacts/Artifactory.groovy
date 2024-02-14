@@ -27,13 +27,14 @@ class Artifactory {
     sb << '"$or": ['
     int lastIdx = filenames.size() - 1
     filenames.eachWithIndex { filename, idx ->
+      filename = filename.replace("-dist", "*")
       sb << '{"name": {"\$match":"' << filename << '"}}'
       if (idx < lastIdx) sb << ', '
     }
     sb << ']'
     sb << '})'
-    sb << '.include("repo", "path", "name", "actual_md5", "actual_sha1", "sha256", "size", "type")'
-    sb << '.sort({"\$desc" : ["created"]}).limit(1)' // only to return the very last snapshot - most recent
+    sb << '.include("repo", "path", "name", "actual_md5", "actual_sha1", "sha256", "size", "created")'
+    sb << '.sort({"\$asc" : ["created"]})' // only to return the very last snapshot - most recent
     dsl.log.info sb.toString()
     Map aql = aql(sb.toString())
     aql?.results as List<Map> ?: []

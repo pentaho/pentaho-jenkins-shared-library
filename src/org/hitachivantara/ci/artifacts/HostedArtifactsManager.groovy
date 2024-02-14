@@ -109,8 +109,10 @@ class HostedArtifactsManager implements Serializable {
         String user = credential.getUsername()
         String password = credential.getPassword().getPlainText()
 
-        String pathMatcher = "${buildData.getString(RELEASE_VERSION)}-" << (isSnapshotBuild() ? "SNAPSHOT" : buildData.getString(BUILD_ID_TAIL))
+        String pathMatcher = "${buildData.getString(RELEASE_VERSION)}" << (isSnapshotBuild() ? "-SNAPSHOT" : buildData.getString(BUILD_ID_TAIL))
         artifactsMetadata = new Artifactory(dsl, artifactoryURL, user, password).searchArtifacts(getFileNames(), pathMatcher)
+
+        artifactsMetadata = getLatestArtifacts(artifactsMetadata)
 
       } catch (Exception e) {
         dsl.log.info "$e"
@@ -122,6 +124,21 @@ class HostedArtifactsManager implements Serializable {
         dsl.log.info "No artifacts were found in Artifactory!"
       }
     }
+  }
+
+  @NonCPS
+  static List getLatestArtifacts(List<Map> artifactsMetadata){
+    Map<String, Map> latestArtifacts = [:]
+    artifactsMetadata.forEach {
+        String name = it.name as String
+        name = name.replaceAll("[\\d.]", "");
+        latestArtifacts.put(name, it)
+    }
+
+    return latestArtifacts.collect { key, value ->
+      value
+    }.sort {a,b -> a.name <=> b.name }
+
   }
 
   boolean isSnapshotBuild() {
@@ -142,10 +159,11 @@ class HostedArtifactsManager implements Serializable {
   def createHtmlIndex(List<Map> artifactsMetadata, String hostedRootFolder) {
     String template = dsl.libraryResource resource: "templates/hosted/artifacts.vm", encoding: 'UTF-8'
     String currentDate = String.format('%tF %<tH:%<tM', java.time.LocalDateTime.now())
+    String version = "${buildData.getString(RELEASE_VERSION)}" << (isSnapshotBuild() ? "-SNAPSHOT" : "") << buildData.getString(BUILD_ID_TAIL)
 
     Map bindings = [
         files          : artifactsMetadata,
-        buildHeaderInfo: "Build ${buildData.getString(RELEASE_BUILD_NUMBER)} | ${currentDate}",
+        buildHeaderInfo: "Build ${version} | ${currentDate}",
         artifatoryURL  : buildData.getString('MAVEN_RESOLVE_REPO_URL'),
         numberFormat   : new DecimalFormat("###,##0.000")
     ]
@@ -185,7 +203,9 @@ class HostedArtifactsManager implements Serializable {
         }
 
         if (properVersion) {
-          properVersion = properVersion.replace('BUILDTAG', '*').replace('SNAPSHOT', '*')
+          properVersion = properVersion
+              .replace('BUILDTAG', '*')
+              .replace('SNAPSHOT', '*')
         }
 
         return properVersion
