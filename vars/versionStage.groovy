@@ -16,6 +16,7 @@ import org.hitachivantara.ci.config.BuildData
 import java.util.regex.Matcher
 
 import static org.hitachivantara.ci.GroovyUtils.groupBy
+import static org.hitachivantara.ci.config.LibraryProperties.ARTIFACT_DEPLOYER_CREDENTIALS_ID
 import static org.hitachivantara.ci.config.LibraryProperties.BUILD_CONFIG_ROOT_PATH
 import static org.hitachivantara.ci.config.LibraryProperties.BUILD_ID_TAIL
 import static org.hitachivantara.ci.config.LibraryProperties.BUILD_RETRIES
@@ -76,7 +77,7 @@ void doVersioning(BuildData buildData) {
 
   // download it if not already present locally
   if (!FileUtils.exists(vmJarPath)) {
-    httpRequest(url: vmUrl, httpMode: 'GET', outputFile: vmJarPath)
+    httpRequest(url: vmUrl, httpMode: 'GET', outputFile: vmJarPath, authentication: buildData.getString(ARTIFACT_DEPLOYER_CREDENTIALS_ID))
   }
 
   boolean isReleaseMode = buildData.getBool(RELEASE_MODE)
