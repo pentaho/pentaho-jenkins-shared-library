@@ -241,4 +241,6 @@ class LibraryProperties implements Serializable {
 
   public static final String ARTIFACTORY_BASE_URL = 'ARTIFACTORY_BASE_URL'
 
+  public static final String IS_SNAPSHOT = 'IS_SNAPSHOT'
+
 }

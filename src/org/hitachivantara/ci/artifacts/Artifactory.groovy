@@ -18,12 +18,19 @@ class Artifactory {
     this.rtPassword = rtPassword
   }
 
-  List<Map> searchArtifacts(List<String> filenames, final String pathMatch) {
+  List<Map> searchArtifacts(
+      List<String> filenames,
+      final String pathMatch,
+      String pathNotMatch = null,
+      String sortingDirection = "\$asc",
+      Integer limit = null
+  ) {
 
     String repo = ''//baseUrl.pathSegments().last()
     def sb = "" << "items.find({"
     if (repo) sb << '"repo": "' << repo << '", '
     sb << '"type": "file", "path": {"\$match":"*/' << pathMatch << '"},'
+    if (pathNotMatch) sb << '"path": {"\$nmatch":"*/' << pathNotMatch << '"},'
     sb << '"$or": ['
     int lastIdx = filenames.size() - 1
     filenames.eachWithIndex { filename, idx ->
@@ -34,7 +41,9 @@ class Artifactory {
     sb << ']'
     sb << '})'
     sb << '.include("repo", "path", "name", "actual_md5", "actual_sha1", "sha256", "size", "created")'
-    sb << '.sort({"\$asc" : ["created"]})' // only to return the very last snapshot - most recent
+    sb << '.sort({"' << sortingDirection << '" : ["created"]})'
+    if (limit) sb << '.limit(' << limit << ')'
+
     dsl.log.info sb.toString()
     Map aql = aql(sb.toString())
     aql?.results as List<Map> ?: []
