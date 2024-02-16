@@ -10,6 +10,7 @@ import org.hitachivantara.ci.config.BuildData
 
 import java.nio.file.Paths
 import java.text.DecimalFormat
+import java.time.LocalDateTime
 
 import static org.hitachivantara.ci.config.LibraryProperties.*
 
@@ -158,14 +159,20 @@ class HostedArtifactsManager implements Serializable {
 
   def createHtmlIndex(List<Map> artifactsMetadata, String hostedRootFolder) {
     String template = dsl.libraryResource resource: "templates/hosted/artifacts.vm", encoding: 'UTF-8'
-    String currentDate = String.format('%tF %<tH:%<tM', java.time.LocalDateTime.now())
+    String currentDate = String.format('%tF %<tH:%<tM', LocalDateTime.now())
     String version = "${buildData.getString(RELEASE_VERSION)}" << (isSnapshotBuild() ? "-SNAPSHOT" : "") << buildData.getString(BUILD_ID_TAIL)
+
+    String existingFolders = ""
+    dsl.dir("$hostedRootFolder/../") {
+      existingFolders = dsl.sh(script: "ls -1dt */ | head -n 4", returnStdout: true).trim()
+    }
 
     Map bindings = [
         files          : artifactsMetadata,
         buildHeaderInfo: "Build ${version} | ${currentDate}",
         artifatoryURL  : buildData.getString('MAVEN_RESOLVE_REPO_URL'),
-        numberFormat   : new DecimalFormat("###,##0.000")
+        numberFormat   : new DecimalFormat("###,##0.000"),
+        existingFolders: existingFolders.split('/')
     ]
     String index
 
