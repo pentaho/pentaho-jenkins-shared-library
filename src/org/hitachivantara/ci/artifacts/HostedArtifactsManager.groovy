@@ -141,7 +141,7 @@ class HostedArtifactsManager implements Serializable {
         }
       }
 
-      dsl.writeFile file: "${hostedRoot}/../index.html", text: content.toString()
+      dsl.writeFile file: "${hostedRoot}/../index.html", text: "<div class=\"tabs\">${content.toString()}</div>"
     }
   }
 
@@ -213,7 +213,8 @@ class HostedArtifactsManager implements Serializable {
         files          : artifactsMetadata,
         buildHeaderInfo: "Build ${version} | ${currentDate}",
         artifatoryURL  : buildData.getString('MAVEN_RESOLVE_REPO_URL'),
-        numberFormat   : new DecimalFormat("###,##0.000")
+        numberFormat   : new DecimalFormat("###,##0.000"),
+        version: version
     ]
 
     String index
