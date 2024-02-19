@@ -114,7 +114,8 @@ class HostedArtifactsManager implements Serializable {
       StringBuilder content = new StringBuilder(header)
 
       if (isSnapshotBuild()) {
-        buildIndexHtml(releaseVersion, null, hostedRoot, content, artifactoryHandler)
+        List<Map> artifactsMetadata = artifactoryHandler.searchArtifacts(getFileNames(), "$releaseVersion-SNAPSHOT")
+        content.append(buildIndexHtml(artifactsMetadata, null))
       } else {
         List<Map> versionsData = artifactoryHandler
             .searchArtifacts(
@@ -133,15 +134,37 @@ class HostedArtifactsManager implements Serializable {
 
         try {
           List<String> menuIds = relevantBuildNbrs.collect {
-            "$releaseVersion-" << (isSnapshotBuild() ? "SNAPSHOT" : it)
+            "$releaseVersion-$it"
           } as List<String>
 
           content.append(createMenus(menuIds))
 
           boolean isLatest = true
           for (String buildNbr : relevantBuildNbrs) {
-            String pathMatcher = "$releaseVersion-" << (isSnapshotBuild() ? "SNAPSHOT" : buildNbr)
-            buildIndexHtml(releaseVersion, buildNbr, content, artifactoryHandler, pathMatcher, hostedRoot, isLatest)
+            String pathMatcher = "$releaseVersion-$buildNbr"
+            List<Map> artifactsMetadata = artifactoryHandler.searchArtifacts(getFileNames(buildNbr), pathMatcher)
+            if (artifactsMetadata?.size() > 0) {
+              String htmlSection = buildIndexHtml(artifactsMetadata, pathMatcher)
+              content.append(htmlSection)
+
+              /*
+                When iterating the builds, when we find the current build, we need to:
+                  - create the sum files in the proper path
+                  - create the index in the 'latest' folder
+              */
+              if (isLatest) {
+                // create the checksum files
+                for (Map file : artifactsMetadata) {
+                  dsl.writeFile file: "$hostedRoot/${file.name}.sum", text: "SHA1=${file.actual_sha1}"
+                }
+
+                // create the index in the 'latest' folder
+                dsl.writeFile file: "$hostedRoot/../latest/index.html", text: "$header $htmlSection"
+              }
+
+            } else {
+              dsl.log.info "No artifacts were found in Artifactory for build $buildNbr!"
+            }
             isLatest = false
           }
         } catch (Exception e) {
@@ -153,43 +176,16 @@ class HostedArtifactsManager implements Serializable {
     }
   }
 
-  def buildIndexHtml(
-      final String releaseVersion,
-      final String buildNbr,
-      StringBuilder content,
-      Artifactory artifactoryHandler,
-      String pathMatcher,
-      String hostedRoot,
-      Boolean isLatest
+  String buildIndexHtml(
+      List<Map> artifactsMetadata,
+      String pathMatcher
   ) {
-    List<Map> artifactsMetadata = artifactoryHandler.searchArtifacts(getFileNames(buildNbr), pathMatcher)
 
     if (isSnapshotBuild()) {
       artifactsMetadata = getLatestArtifacts(artifactsMetadata)
     }
 
-    if (artifactsMetadata?.size() > 0) {
-      String htmlSection = createHtmlSection(artifactsMetadata, pathMatcher)
-      content.append(htmlSection)
-
-      /*
-        When iterating the builds, when we find the current build, we need to:
-          - create the sum files in the proper path
-          - create the index in the 'latest' folder
-      */
-      if (isLatest) {
-        // create the checksum files
-        for(Map file : artifactsMetadata) {
-          dsl.writeFile file: "$hostedRoot/${file.name}.sum", text: "SHA1=${file.actual_sha1}"
-        }
-
-        // create the index in the 'latest' folder
-        dsl.writeFile file: "$hostedRoot/../latest/index.html", text: content.toString()
-      }
-
-    } else {
-      dsl.log.info "No artifacts were found in Artifactory for build $buildNbr!"
-    }
+    return createHtmlSection(artifactsMetadata, pathMatcher)
   }
 
   @NonCPS
