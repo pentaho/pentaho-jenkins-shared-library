@@ -131,10 +131,18 @@ class HostedArtifactsManager implements Serializable {
               .replace(".pom", "")
         }
 
-        dsl.log.info "******* $relevantBuildNbrs"
         try {
+          List<String> menuIds = relevantBuildNbrs.collect {
+            "$releaseVersion-" << (isSnapshotBuild() ? "SNAPSHOT" : it)
+          } as List<String>
+
+          content.append(createMenus(menuIds))
+
+          boolean isLatest = true
           for (String buildNbr : relevantBuildNbrs) {
-            buildIndexHtml(releaseVersion, buildNbr, hostedRoot, content, artifactoryHandler)
+            String pathMatcher = "$releaseVersion-" << (isSnapshotBuild() ? "SNAPSHOT" : buildNbr)
+            buildIndexHtml(releaseVersion, buildNbr, content, artifactoryHandler, pathMatcher, hostedRoot, isLatest)
+            isLatest = false
           }
         } catch (Exception e) {
           dsl.log.error "$e"
@@ -148,11 +156,12 @@ class HostedArtifactsManager implements Serializable {
   def buildIndexHtml(
       final String releaseVersion,
       final String buildNbr,
-      final String hostedRoot,
       StringBuilder content,
-      Artifactory artifactoryHandler
+      Artifactory artifactoryHandler,
+      String pathMatcher,
+      String hostedRoot,
+      Boolean isLatest
   ) {
-    String pathMatcher = "$releaseVersion-" << (isSnapshotBuild() ? "SNAPSHOT" : buildNbr)
     List<Map> artifactsMetadata = artifactoryHandler.searchArtifacts(getFileNames(buildNbr), pathMatcher)
 
     if (isSnapshotBuild()) {
@@ -163,11 +172,19 @@ class HostedArtifactsManager implements Serializable {
       String htmlSection = createHtmlSection(artifactsMetadata, pathMatcher)
       content.append(htmlSection)
 
-      if (!isSnapshotBuild()) {
+      /*
+        When iterating the builds, when we find the current build, we need to:
+          - create the sum files in the proper path
+          - create the index in the 'latest' folder
+      */
+      if (isLatest) {
         // create the checksum files
-        /*artifactsMetadata.forEach {
-          dsl.writeFile file: "$hostedRoot/${it.name}.sum", text: "SHA1=${it.actual_sha1}"
-        }*/
+        for(Map file : artifactsMetadata) {
+          dsl.writeFile file: "$hostedRoot/${file.name}.sum", text: "SHA1=${file.actual_sha1}"
+        }
+
+        // create the index in the 'latest' folder
+        dsl.writeFile file: "$hostedRoot/../latest/index.html", text: content.toString()
       }
 
     } else {
@@ -204,8 +221,28 @@ class HostedArtifactsManager implements Serializable {
     )
   }
 
+  String createMenus(List<String> relevantBuildNbrs) {
+    String template = dsl.libraryResource resource: "templates/hosted/buildsMenu.vm", encoding: 'UTF-8'
+
+    Map bindings = [
+        builds: relevantBuildNbrs
+    ]
+
+    String index
+
+    try {
+      index = dsl.resolveTemplate(
+          text: template,
+          parameters: bindings
+      )
+    } catch (Exception e) {
+      dsl.log.error "$e"
+    }
+
+    return index
+  }
+
   String createHtmlSection(List<Map> artifactsMetadata, String version) {
-    dsl.log.info("********** $version")
     String template = dsl.libraryResource resource: "templates/hosted/artifacts.vm", encoding: 'UTF-8'
     String currentDate = String.format('%tF %<tH:%<tM', LocalDateTime.now())
 
@@ -214,7 +251,7 @@ class HostedArtifactsManager implements Serializable {
         buildHeaderInfo: "Build ${version} | ${currentDate}",
         artifatoryURL  : buildData.getString('MAVEN_RESOLVE_REPO_URL'),
         numberFormat   : new DecimalFormat("###,##0.000"),
-        version: version
+        version        : version
     ]
 
     String index

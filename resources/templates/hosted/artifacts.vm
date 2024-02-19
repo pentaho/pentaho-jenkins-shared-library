@@ -1,4 +1,4 @@
-<div id="$version">
+<div id="$version" class="build-item">
     <table border="0">
       <tr>
         <th align="left">$buildHeaderInfo</th>
