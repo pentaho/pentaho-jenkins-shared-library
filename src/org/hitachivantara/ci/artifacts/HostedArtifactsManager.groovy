@@ -12,6 +12,7 @@ import org.hitachivantara.ci.config.BuildData
 import java.nio.file.Paths
 import java.text.DecimalFormat
 import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
 import static org.hitachivantara.ci.config.LibraryProperties.*
 
@@ -114,8 +115,10 @@ class HostedArtifactsManager implements Serializable {
       StringBuilder content = new StringBuilder(header)
 
       if (isSnapshotBuild()) {
-        List<Map> artifactsMetadata = artifactoryHandler.searchArtifacts(getFileNames(), "$releaseVersion-SNAPSHOT")
-        content.append(buildIndexHtml(artifactsMetadata, null))
+        String pathMatcher = "$releaseVersion-SNAPSHOT"
+        List<Map> artifactsMetadata = artifactoryHandler.searchArtifacts(getFileNames(), pathMatcher)
+        content.append(buildHtmlPortion(artifactsMetadata, pathMatcher, null))
+
       } else {
         List<Map> versionsData = artifactoryHandler
             .searchArtifacts(
@@ -126,26 +129,31 @@ class HostedArtifactsManager implements Serializable {
                 4
             )
 
-        List<String> relevantBuildNbrs = versionsData.collect {
-          (it.name as String)
-              .replace("pentaho-parent-pom-${releaseVersion}-", "")
-              .replace(".pom", "")
+        List<Map> relevantBuilds = versionsData.collect {
+          [
+              number :
+                  (it.name as String)
+                      .replace("pentaho-parent-pom-${releaseVersion}-", "")
+                      .replace(".pom", ""),
+              created: it.created
+          ]
         }
 
         try {
-          List<String> menuIds = relevantBuildNbrs.collect {
-            "$releaseVersion-$it"
+          List<String> menuIds = relevantBuilds.collect {
+            "$releaseVersion-$it.number"
           } as List<String>
 
           content.append(createMenus(menuIds))
 
           boolean isLatest = true
-          for (String buildNbr : relevantBuildNbrs) {
-            String pathMatcher = "$releaseVersion-$buildNbr"
-            List<Map> artifactsMetadata = artifactoryHandler.searchArtifacts(getFileNames(buildNbr), pathMatcher)
+          for (Map build : relevantBuilds) {
+            String pathMatcher = "$releaseVersion-$build.number"
+            String createDate = "$build.created"
+            List<Map> artifactsMetadata = artifactoryHandler.searchArtifacts(getFileNames("$build.number"), pathMatcher)
             if (artifactsMetadata?.size() > 0) {
-              String htmlSection = buildIndexHtml(artifactsMetadata, pathMatcher)
-              content.append(htmlSection)
+              String htmlPortion = buildHtmlPortion(artifactsMetadata, pathMatcher, createDate)
+              content.append(htmlPortion)
 
               /*
                 When iterating the builds, when we find the current build, we need to:
@@ -153,13 +161,13 @@ class HostedArtifactsManager implements Serializable {
                   - create the index in the 'latest' folder
               */
               if (isLatest) {
-                // create the checksum files
+                // creates the checksum files
                 for (Map file : artifactsMetadata) {
                   dsl.writeFile file: "$hostedRoot/${file.name}.sum", text: "SHA1=${file.actual_sha1}"
                 }
 
-                // create the index in the 'latest' folder
-                dsl.writeFile file: "$hostedRoot/../latest/index.html", text: "$header $htmlSection"
+                // creates the index in the 'latest' folder
+                dsl.writeFile file: "$hostedRoot/../latest/index.html", text: "$header $htmlPortion"
               }
 
             } else {
@@ -172,20 +180,22 @@ class HostedArtifactsManager implements Serializable {
         }
       }
 
-      dsl.writeFile file: "${hostedRoot}/../index.html", text: "<div class=\"tabs\">${content.toString()}</div>"
+      // creates index at the main build folder
+      dsl.writeFile file: "${hostedRoot}/../index.html", text: content.toString()
     }
   }
 
-  String buildIndexHtml(
+  String buildHtmlPortion(
       List<Map> artifactsMetadata,
-      String pathMatcher
+      String version,
+      String createDate
   ) {
 
     if (isSnapshotBuild()) {
       artifactsMetadata = getLatestArtifacts(artifactsMetadata)
     }
 
-    return createHtmlSection(artifactsMetadata, pathMatcher)
+    return createHtmlPortion(artifactsMetadata, version, createDate)
   }
 
   @NonCPS
@@ -224,7 +234,7 @@ class HostedArtifactsManager implements Serializable {
         builds: relevantBuildNbrs
     ]
 
-    String index
+    String index = ""
 
     try {
       index = dsl.resolveTemplate(
@@ -238,19 +248,28 @@ class HostedArtifactsManager implements Serializable {
     return index
   }
 
-  String createHtmlSection(List<Map> artifactsMetadata, String version) {
+  String createHtmlPortion(List<Map> artifactsMetadata, String version, String createDate) {
     String template = dsl.libraryResource resource: "templates/hosted/artifacts.vm", encoding: 'UTF-8'
-    String currentDate = String.format('%tF %<tH:%<tM', LocalDateTime.now())
+
+    String buildDateString = ""
+    if (!createDate) {
+      LocalDateTime buildDate = LocalDateTime.now()
+      buildDateString = String.format('%tF %<tH:%<tM', buildDate)
+    } else {
+      buildDateString = createDate
+          .replace('T', ' ')
+          .substring(0, 16)
+    }
 
     Map bindings = [
         files          : artifactsMetadata,
-        buildHeaderInfo: "Build ${version} | ${currentDate}",
+        buildHeaderInfo: "Build ${version} | ${buildDateString}",
         artifatoryURL  : buildData.getString('MAVEN_RESOLVE_REPO_URL'),
         numberFormat   : new DecimalFormat("###,##0.000"),
         version        : version
     ]
 
-    String index
+    String index = ""
 
     try {
       index = dsl.resolveTemplate(
