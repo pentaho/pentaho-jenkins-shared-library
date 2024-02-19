@@ -44,7 +44,6 @@ class Artifactory {
     sb << '.sort({"' << sortingDirection << '" : ["created"]})'
     if (limit) sb << '.limit(' << limit << ')'
 
-    dsl.log.info sb.toString()
     Map aql = aql(sb.toString())
     aql?.results as List<Map> ?: []
   }

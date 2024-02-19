@@ -101,74 +101,78 @@ class HostedArtifactsManager implements Serializable {
       dsl.log.warn "Not able to determine where to create hosted page!"
 
     } else {
-      String deployCredentials = buildData.getString(ARTIFACT_DEPLOYER_CREDENTIALS_ID)
-      String artifactoryURL = buildData.getString('ARTIFACTORY_BASE_API_URL')
+      final String deployCredentials = buildData.getString(ARTIFACT_DEPLOYER_CREDENTIALS_ID)
+      final String artifactoryURL = buildData.getString('ARTIFACTORY_BASE_API_URL')
 
-      List<Map> artifactsMetadata = []
+      def credential = lookupSystemCredentials(deployCredentials)
+      final String user = credential.getUsername()
+      final String password = credential.getPassword().getPlainText()
 
-      try {
-        def credential = lookupSystemCredentials(deployCredentials)
-        String user = credential.getUsername()
-        String password = credential.getPassword().getPlainText()
+      Artifactory artifactoryHandler = new Artifactory(dsl, artifactoryURL, user, password)
+      final String releaseVersion = buildData.getString(RELEASE_VERSION)
+      final String header = dsl.libraryResource resource: "templates/hosted/header", encoding: 'UTF-8'
+      StringBuilder content = new StringBuilder(header)
 
-        Artifactory artifactoryHandler = new Artifactory(dsl, artifactoryURL, user, password)
-        final String releaseVersion = buildData.getString(RELEASE_VERSION)
-        List<Map> versionsData = []
-
-        if (!isSnapshotBuild()) {
-          versionsData = artifactoryHandler
-              .searchArtifacts(
-                  ["pentaho-parent-pom-${releaseVersion}-*.pom"],
-                  "$releaseVersion-*",
-                  "$releaseVersion-SNAPSHOT",
-                  "\$desc",
-                  4
-              )
-
-          dsl.log.info versionsData.collect {
-            (it.name as String)
-                .replace("pentaho-parent-pom-${releaseVersion}-", "")
-                .replace(".pom", "")
-          }.sort()
-        }
-
-        String pathMatcher = "$releaseVersion" << (isSnapshotBuild() ? "-SNAPSHOT" : buildData.getString(BUILD_ID_TAIL))
-
-        artifactsMetadata = artifactoryHandler.searchArtifacts(getFileNames(), pathMatcher)
-        artifactsMetadata = getLatestArtifacts(artifactsMetadata)
-
-      } catch (Exception e) {
-        dsl.log.info "$e"
-      }
-
-      if (artifactsMetadata?.size() > 0) {
-        List<String> latestSubFolders = getLatesSubFolders(hostedRoot)
-        createHtmlIndex(artifactsMetadata, hostedRoot, latestSubFolders)
-
-        if (!isSnapshotBuild()) {
-          // create the checksum files
-          artifactsMetadata.forEach {
-            dsl.writeFile file: "$hostedRootFolder/${it.name}.sum", text: "SHA1=${it.actual_sha1}"
-          }
-
-
-          // remove older folders of the suite build
-          // find . -mindepth 1  -maxdepth 1  -type d \( -not -name 'latest' -a -not -name 'vitor' \) -exec rm -rf {} \;
-        }
-
+      if (isSnapshotBuild()) {
+        buildIndexHtml(releaseVersion, null, hostedRoot, content, artifactoryHandler)
       } else {
-        dsl.log.info "No artifacts were found in Artifactory!"
+        List<Map> versionsData = artifactoryHandler
+            .searchArtifacts(
+                ["pentaho-parent-pom-${releaseVersion}-*.pom"],
+                "$releaseVersion-*",
+                "$releaseVersion-SNAPSHOT",
+                "\$desc",
+                4
+            )
+
+        List<String> relevantBuildNbrs = versionsData.collect {
+          (it.name as String)
+              .replace("pentaho-parent-pom-${releaseVersion}-", "")
+              .replace(".pom", "")
+        }
+
+        dsl.log.info "******* $relevantBuildNbrs"
+        try {
+          for (String buildNbr : relevantBuildNbrs) {
+            buildIndexHtml(releaseVersion, buildNbr, hostedRoot, content, artifactoryHandler)
+          }
+        } catch (Exception e) {
+          dsl.log.error "$e"
+        }
       }
+
+      dsl.writeFile file: "${hostedRoot}/../index.html", text: content.toString()
     }
   }
 
-  List<String> getLatesSubFolders(String hostedRootFolder, Integer nbrOfExistingFolders = 4) {
-    String existingFolders = ""
-    dsl.dir("$hostedRootFolder/../") {
-      existingFolders = dsl.sh(script: "ls -1dt */ | head -n $nbrOfExistingFolders", returnStdout: true).trim()
+  def buildIndexHtml(
+      final String releaseVersion,
+      final String buildNbr,
+      final String hostedRoot,
+      StringBuilder content,
+      Artifactory artifactoryHandler
+  ) {
+    String pathMatcher = "$releaseVersion-" << (isSnapshotBuild() ? "SNAPSHOT" : buildNbr)
+    List<Map> artifactsMetadata = artifactoryHandler.searchArtifacts(getFileNames(buildNbr), pathMatcher)
+
+    if (isSnapshotBuild()) {
+      artifactsMetadata = getLatestArtifacts(artifactsMetadata)
     }
 
-    return existingFolders.split('/')
+    if (artifactsMetadata?.size() > 0) {
+      String htmlSection = createHtmlSection(artifactsMetadata, pathMatcher)
+      content.append(htmlSection)
+
+      if (!isSnapshotBuild()) {
+        // create the checksum files
+        /*artifactsMetadata.forEach {
+          dsl.writeFile file: "$hostedRoot/${it.name}.sum", text: "SHA1=${it.actual_sha1}"
+        }*/
+      }
+
+    } else {
+      dsl.log.info "No artifacts were found in Artifactory for build $buildNbr!"
+    }
   }
 
   @NonCPS
@@ -200,18 +204,18 @@ class HostedArtifactsManager implements Serializable {
     )
   }
 
-  def createHtmlIndex(List<Map> artifactsMetadata, String hostedRootFolder, List<String> existingFolders) {
+  String createHtmlSection(List<Map> artifactsMetadata, String version) {
+    dsl.log.info("********** $version")
     String template = dsl.libraryResource resource: "templates/hosted/artifacts.vm", encoding: 'UTF-8'
     String currentDate = String.format('%tF %<tH:%<tM', LocalDateTime.now())
-    String version = "${buildData.getString(RELEASE_VERSION)}" << (isSnapshotBuild() ? "-SNAPSHOT" : "") << buildData.getString(BUILD_ID_TAIL)
 
     Map bindings = [
         files          : artifactsMetadata,
         buildHeaderInfo: "Build ${version} | ${currentDate}",
         artifatoryURL  : buildData.getString('MAVEN_RESOLVE_REPO_URL'),
-        numberFormat   : new DecimalFormat("###,##0.000"),
-        existingFolders: existingFolders
+        numberFormat   : new DecimalFormat("###,##0.000")
     ]
+
     String index
 
     try {
@@ -220,13 +224,10 @@ class HostedArtifactsManager implements Serializable {
           parameters: bindings
       )
     } catch (Exception e) {
-      dsl.log.error e
+      dsl.log.error "$e"
     }
-    String header = dsl.libraryResource resource: "templates/hosted/header", encoding: 'UTF-8'
 
-    String content = new StringBuilder(header).append(index)
-
-    dsl.writeFile file: "${hostedRootFolder}/index.html", text: content.toString()
+    return index
   }
 
   List<String> getFileNames(String buildNbr = null) {

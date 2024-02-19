@@ -1,33 +1,7 @@
-<style>
-  body, html {
-      background-color: #2d2d2d;
-      font-family: monospace;
-      font-size: 13px;
-      color: #4AF626;
-    }
-    table {
-      border-spacing: 10px;
-      margin-left: auto;
-      margin-right: auto;
-    }
-    th {
-      border-bottom: dashed 1px white;
-      color: white;
-    }
-    a {
-      font-family: monospace;
-      font-size: 13px;
-      color: #4AF626;
-    }
-</style>
-<a href="../">../</a>
+
 <table border="0">
   <tr>
-    <th align="left">$buildHeaderInfo
-    #foreach ($folder in $existingFolders)
-      | <a href="../$folder">$folder</a>
-    #end
-    </th>
+    <th align="left">$buildHeaderInfo</th>
     <th align="center" width=90>OS</th>
     <th align="center" width=90>Size (MB)</th>
     <th align="center" width=90>Checksums&nbsp;</th>
