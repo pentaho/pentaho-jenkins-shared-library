@@ -361,7 +361,12 @@ void collectJobData() {
 void hosting(String id = 'hosting', String label = '') {
   new SimpleStage(id: id, label: label ?: id.capitalize(),
       body: {
+        log.info "ccccc"
         hostedStage.call()
+      },
+      onError:
+      { Throwable e ->
+        log.warn "Error +++++: ${e.message}", e
       }
   ).run()
 }

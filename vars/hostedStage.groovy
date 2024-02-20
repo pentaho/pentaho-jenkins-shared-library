@@ -13,8 +13,9 @@ import static org.hitachivantara.ci.config.LibraryProperties.STAGE_HOST_ARTIFACT
 def call() {
   BuildData buildData = BuildData.instance
   Boolean ignoreFailures = buildData.getBool(IGNORE_PIPELINE_FAILURE)
-
+  log.info "11111111"
   if (buildData.runHosted) {
+    log.info "222222"
     utils.timer(
         {
           utils.handleError(
