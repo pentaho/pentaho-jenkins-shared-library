@@ -238,5 +238,6 @@ class LibraryProperties implements Serializable {
   public static final String DISABLE_CONCURRENT_BUILDS = 'DISABLE_CONCURRENT_BUILDS'
 
   public static final String ARTIFACTORY_BASE_URL = 'ARTIFACTORY_BASE_URL'
+  public static final String FROGBOT_PATH_EXCLUSIONS = 'FROGBOT_PATH_EXCLUSIONS'
 
 }
