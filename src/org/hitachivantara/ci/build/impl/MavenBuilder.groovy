@@ -27,7 +27,7 @@ import static org.hitachivantara.ci.GroovyUtils.intersect
 import static org.hitachivantara.ci.FileUtils.isChild
 import static org.hitachivantara.ci.build.helper.BuilderUtils.process
 import static org.hitachivantara.ci.FileUtils.resolve
-import static org.hitachivantara.ci.build.helper.BuilderUtils.processOutput
+
 import static org.hitachivantara.ci.config.LibraryProperties.ARTIFACTORY_BASE_URL
 import static org.hitachivantara.ci.config.LibraryProperties.ARTIFACT_DEPLOYER_CREDENTIALS_ID
 import static org.hitachivantara.ci.config.LibraryProperties.SCM_API_TOKEN_CREDENTIALS_ID
@@ -43,6 +43,7 @@ import static org.hitachivantara.ci.config.LibraryProperties.DOCKER_PUBLIC_PUSH_
 import static org.hitachivantara.ci.config.LibraryProperties.DOCKER_PRIVATE_PUSH_REPO
 import static org.hitachivantara.ci.config.LibraryProperties.NODEJS_BUNDLE_REPO_URL
 import static org.hitachivantara.ci.config.LibraryProperties.NPM_RELEASE_REPO_URL
+import static org.hitachivantara.ci.config.LibraryProperties.FROGBOT_PATH_EXCLUSIONS
 
 class MavenBuilder extends AbstractBuilder implements IBuilder, Serializable {
 
@@ -99,6 +100,7 @@ class MavenBuilder extends AbstractBuilder implements IBuilder, Serializable {
     String nodeDownloadRoot = "${buildData.getString(NODEJS_BUNDLE_REPO_URL)}"
     String npmDownloadRoot = "${buildData.getString(NPM_RELEASE_REPO_URL)}"
     String localSettingsFile = item.settingsFile ?: settingsFile
+    String frogbotExclusion = buildData.getString(FROGBOT_PATH_EXCLUSIONS)
 
     return { ->
       steps.dir(item.buildWorkDir) {
@@ -109,6 +111,7 @@ class MavenBuilder extends AbstractBuilder implements IBuilder, Serializable {
             "JF_GIT_REPO=${gitRepo}",
             "JF_GIT_PULL_REQUEST_ID=${gitPrNbr}",
             "JF_GIT_OWNER=${gitOwner}",
+            "JF_PATH_EXCLUSIONS=${frogbotExclusion}",
             "MAVEN_ARGS=-V -s ${localSettingsFile} -Dmaven.repo.local='${localRepoPath}' -DnodeDownloadRoot='${nodeDownloadRoot}' -DnpmDownloadRoot='${npmDownloadRoot}'"
         ]) {
           steps.withCredentials([steps.usernamePassword(credentialsId: deployCredentials,
@@ -116,10 +119,6 @@ class MavenBuilder extends AbstractBuilder implements IBuilder, Serializable {
                                  steps.usernamePassword(credentialsId: deployCredentials,
                                      usernameVariable: 'NEXUS_DEPLOY_USER', passwordVariable: 'NEXUS_DEPLOY_PASSWORD'),
                                  steps.string(credentialsId: scmApiTokenCredential, variable: 'JF_GIT_TOKEN')]) {
-
-            //String localSettingsFile = item.settingsFile ?: settingsFile
-            //processOutput("mkdir -p \$HOME/.m2/ && cp ${localSettingsFile } \$HOME/.m2/settings.xml", steps)
-            //steps.log.info "Copied ${localSettingsFile} into \$HOME/.m2/"
 
             steps.log.info "Running /opt/frogbot scan-pull-request"
             if (item.containerized) {
