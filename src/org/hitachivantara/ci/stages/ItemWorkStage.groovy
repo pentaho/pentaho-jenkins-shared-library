@@ -13,6 +13,7 @@ import org.hitachivantara.ci.jenkins.MinionHandler
 import static org.hitachivantara.ci.config.LibraryProperties.BUILD_RETRIES
 import static org.hitachivantara.ci.config.LibraryProperties.IGNORE_PIPELINE_FAILURE
 import static org.hitachivantara.ci.config.LibraryProperties.OVERRIDE_PARAMS
+import static org.hitachivantara.ci.config.LibraryProperties.SLAVE_NODE_LABEL
 
 class ItemWorkStage extends Stage {
 
@@ -89,10 +90,14 @@ class ItemWorkStage extends Stage {
 
     // Minion call
     if (allowMinions && buildData.useMinions) {
-      execution = new JobBuild(MinionHandler.getFullJobName(item))
-        .withParameters([
+      Map minionParams = [
           (OVERRIDE_PARAMS): "${MINION_STAGE}: ${id}"
-        ])
+      ]
+      if (buildData.isSet(SLAVE_NODE_LABEL)) {
+        minionParams.put(SLAVE_NODE_LABEL, "${buildData.getString(SLAVE_NODE_LABEL)}")
+      }
+      execution = new JobBuild(MinionHandler.getFullJobName(item))
+        .withParameters(minionParams)
         .getExecution()
     }
     // Local execution
