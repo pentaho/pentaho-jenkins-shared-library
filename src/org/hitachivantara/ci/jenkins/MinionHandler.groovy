@@ -48,6 +48,7 @@ import static org.hitachivantara.ci.config.LibraryProperties.RUN_BUILDS
 import static org.hitachivantara.ci.config.LibraryProperties.RUN_CHECKOUTS
 import static org.hitachivantara.ci.config.LibraryProperties.RUN_UNIT_TESTS
 import static org.hitachivantara.ci.config.LibraryProperties.SLACK_CHANNEL
+import static org.hitachivantara.ci.config.LibraryProperties.SLACK_CHANNEL_SUCCESS
 import static org.hitachivantara.ci.config.LibraryProperties.SLACK_INTEGRATION
 import static org.hitachivantara.ci.config.LibraryProperties.STAGE_LABEL_ARCHIVING
 import static org.hitachivantara.ci.config.LibraryProperties.STAGE_LABEL_BUILD
@@ -253,7 +254,8 @@ class MinionHandler {
     buildProperties.put(FIRST_JOB, null)
     buildProperties.put(LAST_JOB, null)
     buildProperties.put(RELEASE_BUILD_NUMBER, buildData.getString(RELEASE_BUILD_NUMBER))
-    buildProperties.put(SLACK_CHANNEL, jobItem.slackChannel)
+    buildProperties.put(SLACK_CHANNEL, jobItem.slackChannel ?: buildData.get(SLACK_CHANNEL))
+    buildProperties.put(SLACK_CHANNEL_SUCCESS, getMinionSuccessChannel(jobItem.slackChannel))
     buildProperties.put(PR_SLACK_CHANNEL, jobItem.prSlackChannel)
 
     return [
@@ -264,6 +266,27 @@ class MinionHandler {
         ]
       ]
     ]
+  }
+
+  static String getMinionSuccessChannel(jobItemSlackChannel) {
+    BuildData buildData = BuildData.instance
+    def slackData = jobItemSlackChannel ?: buildData.get(SLACK_CHANNEL)
+
+    switch (slackData) {
+      case String:  // default list of channels configured
+        return slackData as String
+        break
+
+      case Map:     // channels configured per build result
+
+        Map channelConfig = slackData
+        return channelConfig['BUILD_SUCCESS']
+        break
+
+      default: // no channels
+        return ''
+    }
+
   }
 
   /**

@@ -204,6 +204,7 @@ class LibraryProperties implements Serializable {
   public static final String IGNORE_PIPELINE_FAILURE = 'IGNORE_PIPELINE_FAILURE'
   public static final String SLACK_INTEGRATION = 'SLACK_INTEGRATION'
   public static final String SLACK_CHANNEL = 'SLACK_CHANNEL'
+  public static final String SLACK_CHANNEL_SUCCESS = 'SLACK_CHANNEL_SUCCESS'
   public static final String SLACK_TEAM_DOMAIN = 'SLACK_TEAM_DOMAIN'
   public static final String UNMAPPED_DEPENDENCIES_FAIL_BUILD = "UNMAPPED_DEPENDENCIES_FAIL_BUILD"
   public static final String NEXUS_IQ_STAGE = 'NEXUS_IQ_STAGE'
