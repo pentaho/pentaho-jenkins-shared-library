@@ -161,7 +161,7 @@ void sonar(BuildData buildData, JobItem jobItem) {
   // apply container
   if (jobItem.containerized) {
     Closure current = execution
-    execution = { -> utils.withContainer(jobItem.dockerImage, current) }
+    execution = { -> utils.withContainer(jobItem.dockerSonarImage ?: jobItem.dockerImage, current) }
   }
 
   utils.timer(execution) { long duration ->
