@@ -58,6 +58,7 @@ class JobItem implements Serializable {
     'createRelease',
     'directives',
     'dockerImage',
+    'dockerSonarImage',
     'execType',
     'parallelize',
     'passOnBuildParameters',
@@ -401,6 +402,10 @@ class JobItem implements Serializable {
 
   String getDockerImage() {
     data.dockerImage
+  }
+
+  String getDockerSonarImage() {
+    data.dockerSonarImage
   }
 
   Boolean isContainerized() {
