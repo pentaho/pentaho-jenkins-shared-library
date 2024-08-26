@@ -30,6 +30,7 @@ import static org.hitachivantara.ci.FileUtils.resolve
 
 import static org.hitachivantara.ci.config.LibraryProperties.ARTIFACTORY_BASE_URL
 import static org.hitachivantara.ci.config.LibraryProperties.ARTIFACT_DEPLOYER_CREDENTIALS_ID
+import static org.hitachivantara.ci.config.LibraryProperties.FROGBOT_LOG_LEVEL
 import static org.hitachivantara.ci.config.LibraryProperties.SCM_API_TOKEN_CREDENTIALS_ID
 import static org.hitachivantara.ci.config.LibraryProperties.BRANCH_NAME
 import static org.hitachivantara.ci.config.LibraryProperties.CHANGE_ID
@@ -101,6 +102,7 @@ class MavenBuilder extends AbstractBuilder implements IBuilder, Serializable {
     String npmDownloadRoot = "${buildData.getString(NPM_RELEASE_REPO_URL)}"
     String localSettingsFile = item.settingsFile ?: settingsFile
     String frogbotExclusion = buildData.getString(FROGBOT_PATH_EXCLUSIONS)
+    String frogbotLogLevel = buildData.getString(FROGBOT_LOG_LEVEL) ?: 'INFO'
 
     return { ->
       steps.dir(item.buildWorkDir) {
@@ -112,6 +114,7 @@ class MavenBuilder extends AbstractBuilder implements IBuilder, Serializable {
             "JF_GIT_PULL_REQUEST_ID=${gitPrNbr}",
             "JF_GIT_OWNER=${gitOwner}",
             "JF_PATH_EXCLUSIONS=${frogbotExclusion}",
+            "JFROG_CLI_LOG_LEVEL=${frogbotLogLevel}",
             "MAVEN_ARGS=-V -s ${localSettingsFile} -Dmaven.repo.local='${localRepoPath}' -DnodeDownloadRoot='${nodeDownloadRoot}' -DnpmDownloadRoot='${npmDownloadRoot}'"
         ]) {
           steps.withCredentials([steps.usernamePassword(credentialsId: deployCredentials,
