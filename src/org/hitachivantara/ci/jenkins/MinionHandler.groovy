@@ -38,9 +38,12 @@ import static org.hitachivantara.ci.config.LibraryProperties.MINION_BUILD_DATA_R
 import static org.hitachivantara.ci.config.LibraryProperties.MINION_LOGS_TO_KEEP
 import static org.hitachivantara.ci.config.LibraryProperties.MINION_PIPELINE_TEMPLATE
 import static org.hitachivantara.ci.config.LibraryProperties.MINION_POLL_CRON_INTERVAL
+import static org.hitachivantara.ci.config.LibraryProperties.MS_TEAMS_CHANNEL
+import static org.hitachivantara.ci.config.LibraryProperties.MS_TEAMS_INTEGRATION
 import static org.hitachivantara.ci.config.LibraryProperties.OVERRIDE_JOB_PARAMS
 import static org.hitachivantara.ci.config.LibraryProperties.OVERRIDE_PARAMS
 import static org.hitachivantara.ci.config.LibraryProperties.POLL_CRON_INTERVAL
+import static org.hitachivantara.ci.config.LibraryProperties.PR_MS_TEAMS_CHANNEL
 import static org.hitachivantara.ci.config.LibraryProperties.PR_SLACK_CHANNEL
 import static org.hitachivantara.ci.config.LibraryProperties.PR_STATUS_REPORTS
 import static org.hitachivantara.ci.config.LibraryProperties.RELEASE_BUILD_NUMBER
@@ -255,8 +258,10 @@ class MinionHandler {
     buildProperties.put(LAST_JOB, null)
     buildProperties.put(RELEASE_BUILD_NUMBER, buildData.getString(RELEASE_BUILD_NUMBER))
     buildProperties.put(SLACK_CHANNEL, jobItem.slackChannel ?: buildData.get(SLACK_CHANNEL))
-    buildProperties.put(SLACK_CHANNEL_SUCCESS, getMinionSuccessChannel(jobItem.slackChannel))
+    buildProperties.put(SLACK_CHANNEL_SUCCESS, getMinionSlackSuccessChannel(jobItem.slackChannel))
     buildProperties.put(PR_SLACK_CHANNEL, jobItem.prSlackChannel)
+    buildProperties.put(PR_MS_TEAMS_CHANNEL, jobItem.prMsTeamsChannel)
+    buildProperties.put(MS_TEAMS_CHANNEL, jobItem.msTeamsChannel ?: buildData.get(MS_TEAMS_CHANNEL))
 
     return [
       buildProperties: buildProperties.getRawMap(),
@@ -268,7 +273,7 @@ class MinionHandler {
     ]
   }
 
-  static String getMinionSuccessChannel(jobItemSlackChannel) {
+  static String getMinionSlackSuccessChannel(jobItemSlackChannel) {
     BuildData buildData = BuildData.instance
     def slackData = jobItemSlackChannel ?: buildData.get(SLACK_CHANNEL)
 
@@ -338,10 +343,22 @@ class MinionHandler {
     // when in a multibranch minion build, check if it's a PR or a branch build to see which slack channel to send
     // a notification if intended
     if (buildProperties[IS_MULTIBRANCH_MINION]) {
+      boolean setAdditionalParams = false
       def slackChannel = buildProperties[CHANGE_ID] ? buildProperties[PR_SLACK_CHANNEL] : buildProperties[SLACK_CHANNEL]
       if (slackChannel) {
         buildProperties[SLACK_INTEGRATION] = true
         buildProperties[SLACK_CHANNEL] = slackChannel
+        setAdditionalParams = true
+      }
+
+      def msTeamsChannel = buildProperties[CHANGE_ID] ? buildProperties[PR_MS_TEAMS_CHANNEL] : buildProperties[MS_TEAMS_CHANNEL]
+      if (msTeamsChannel) {
+        buildProperties[MS_TEAMS_INTEGRATION] = true
+        buildProperties[MS_TEAMS_CHANNEL] = msTeamsChannel
+        setAdditionalParams = true
+      }
+
+      if (setAdditionalParams) {
         buildProperties[BUILD_PLAN_ID] = (buildProperties[BUILD_PLAN_ID] + '@' + buildProperties[BRANCH_NAME]) as String
         buildProperties[RELEASE_BUILD_NUMBER] = buildProperties[BUILD_NUMBER]
       }

@@ -5,6 +5,7 @@
  */
 import org.hitachivantara.ci.config.BuildData
 import org.hitachivantara.ci.report.LogReport
+import org.hitachivantara.ci.report.MSTeamsReport
 import org.hitachivantara.ci.report.PullRequestReport
 import org.hitachivantara.ci.report.SlackReport
 import org.hitachivantara.ci.report.BuildOrderReport
@@ -13,6 +14,7 @@ import static org.hitachivantara.ci.config.LibraryProperties.BUILD_ORDER_REPORT
 import static org.hitachivantara.ci.config.LibraryProperties.PR_STATUS_REPORTS
 import static org.hitachivantara.ci.config.LibraryProperties.SLACK_INTEGRATION
 import static org.hitachivantara.ci.config.LibraryProperties.STAGE_LABEL_REPORT
+import static org.hitachivantara.ci.config.LibraryProperties.MS_TEAMS_INTEGRATION
 
 def call() {
   BuildData buildData = BuildData.instance
@@ -56,6 +58,16 @@ void doReport(BuildData buildData) {
           .build(buildData)
           .send()
       }
+    ]
+  }
+
+  if (buildData.getBool(MS_TEAMS_INTEGRATION)) {
+    tasks << [
+        'MS Teams': {
+          new MSTeamsReport(this)
+              .build(buildData)
+              .send()
+        }
     ]
   }
 

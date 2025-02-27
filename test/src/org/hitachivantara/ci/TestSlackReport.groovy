@@ -252,16 +252,16 @@ class TestSlackReport extends BasePipelineSpecification {
         MINIONS_FOLDER      : 'minions-jobs-folder'
       ])
 
-      Map errors = [
-        (BuildStatus.Level.ERRORS):
-          [(STAGE_LABEL_UNIT_TEST): [
-            (BuildStatus.Category.JOB): [
-              (new JobItem([jobID: 'job1', scmUrl: 'git@git:org/repo-1.git', scmBranch: 'master'])): null,
-              (new JobItem([jobID: 'job2', scmUrl: 'git@git:org/repo-2.git', scmBranch: 'master'])): null
+    Map errors = [
+        (BuildStatus.Level.ERRORS): [
+            (STAGE_LABEL_UNIT_TEST): [
+                (BuildStatus.Category.JOB): [
+                    (new JobItem([jobID: 'job1', scmUrl: 'git@git:org/repo-1.git', scmBranch: 'master'])): null,
+                    (new JobItem([jobID: 'job2', scmUrl: 'git@git:org/repo-2.git', scmBranch: 'master'])): null
+                ]
             ]
-          ]
-          ]
-      ]
+        ]
+    ]
 
       configRule.buildStatus = new BuildStatus(buildStatus: hasErrors ? errors : [:])
 
@@ -328,13 +328,13 @@ class TestSlackReport extends BasePipelineSpecification {
         ]
       ])
 
-      Map releases = [
-        (BuildStatus.Level.RELEASES):
-          [(STAGE_LABEL_UNIT_TEST): [
-            (BuildStatus.Category.GENERAL): releaseItems
-          ]
-          ]
-      ]
+    Map releases = [
+        (BuildStatus.Level.RELEASES): [
+            (STAGE_LABEL_UNIT_TEST): [
+                (BuildStatus.Category.GENERAL): releaseItems
+            ]
+        ]
+    ]
 
       configRule.buildStatus = new BuildStatus(buildStatus: releases)
 
@@ -401,8 +401,8 @@ class TestSlackReport extends BasePipelineSpecification {
     ])
 
     Map branchStatus = [
-      (BuildStatus.Level.BRANCH_STATUS):
-        [(STAGE_LABEL_COLLECT_JOB_DATA): [(BuildStatus.Category.GENERAL): branchStatusData as Map]]
+        (BuildStatus.Level.BRANCH_STATUS): [
+            (STAGE_LABEL_COLLECT_JOB_DATA): [(BuildStatus.Category.GENERAL): branchStatusData as Map]]
     ]
 
     configRule.buildStatus = new BuildStatus(buildStatus: branchStatus)

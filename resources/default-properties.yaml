@@ -162,6 +162,10 @@ SLACK_CHANNEL:
 SLACK_TEAM_DOMAIN:
 SLACK_CREDENTIALS_ID:
 
+# MS Teams Integration
+MS_TEAMS_INTEGRATION: false
+MS_TEAMS_CHANNEL:
+
 # Archiving
 ARCHIVING_EXCLUDE_PATTERN: '(.*/.git/.*)' #exclusion group
 ARCHIVING_PATH_GROUP_REGEX: '.*/(target|dist|build)/(?:(?!.*(dependencies)).*/)?'

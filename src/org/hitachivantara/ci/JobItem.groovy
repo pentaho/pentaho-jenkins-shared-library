@@ -70,6 +70,7 @@ class JobItem implements Serializable {
     'prReportStatus',
     'prScan',
     'prSlackChannel',
+    'prMsTeamsChannel',
     'prStatusLabel',
     'root',
     'scmBranch',
@@ -84,6 +85,7 @@ class JobItem implements Serializable {
     'securityScannable',
     'settingsFile',
     'slackChannel',
+    'msTeamsChannel',
     'targetJobName',
     'testable',
     'testsArchivePattern',
@@ -497,6 +499,15 @@ class JobItem implements Serializable {
   def getPrSlackChannel() {
     data.prSlackChannel
   }
+
+  def getMsTeamsChannel() {
+    data.msTeamsChannel
+  }
+
+  def getPrMsTeamsChannel() {
+    data.prMsTeamsChannel
+  }
+
   /**
    * Get timeout in minutes
    * @return

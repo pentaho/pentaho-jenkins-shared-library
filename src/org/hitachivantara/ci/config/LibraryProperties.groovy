@@ -172,6 +172,8 @@ class LibraryProperties implements Serializable {
   //*******************
   public static final String PR_STATUS_REPORTS = 'PR_STATUS_REPORTS'
   public static final String PR_SLACK_CHANNEL = 'PR_SLACK_CHANNEL'
+  public static final String PR_MS_TEAMS_CHANNEL = 'PR_MS_TEAMS_CHANNEL'
+
 
   //***************
   //** Got tired **
@@ -219,6 +221,10 @@ class LibraryProperties implements Serializable {
   public static final String OVERRIDE_JOB_PARAMS = 'OVERRIDE_JOB_PARAMS'
   public static final String OVERRIDE_PARAMS = 'OVERRIDE_PARAMS'
   public static final String JOB_ITEM_DEFAULTS = 'JOB_ITEM_DEFAULTS'
+
+  public static final String MS_TEAMS_INTEGRATION = 'MS_TEAMS_INTEGRATION'
+  public static final String MS_TEAMS_CHANNEL = 'MS_TEAMS_CHANNEL'
+
 
   //public static final String LIB_VERSION = 'LIB_VERSION'
   //public static final String LIB_NAME = 'LIB_NAME'

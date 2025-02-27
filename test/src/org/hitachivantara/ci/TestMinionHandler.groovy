@@ -8,6 +8,8 @@ import org.junit.rules.RuleChain
 
 import static org.hitachivantara.ci.config.LibraryProperties.BUILD_PLAN_ID
 import static org.hitachivantara.ci.config.LibraryProperties.LIB_CACHE_ROOT_PATH
+import static org.hitachivantara.ci.config.LibraryProperties.MS_TEAMS_CHANNEL
+import static org.hitachivantara.ci.config.LibraryProperties.MS_TEAMS_INTEGRATION
 import static org.hitachivantara.ci.config.LibraryProperties.RELEASE_BUILD_NUMBER
 import static org.hitachivantara.ci.config.LibraryProperties.SLACK_CHANNEL
 import static org.hitachivantara.ci.config.LibraryProperties.SLACK_INTEGRATION
@@ -24,14 +26,16 @@ class TestMinionHandler extends BasePipelineSpecification {
   RuleChain rules = Rules.getCommonRules(this)
     .around(configRule)
 
-  def "Test minion slack configuration"() {
+  def "Test minion slack/MS Teams configuration"() {
     setup:
       JobItem jobItem = configRule.newJobItem(
         slackChannel: slackConfig,
-        prSlackChannel: prSlackConfig
+        prSlackChannel: prSlackConfig,
+        msTeamsChannel: msTeamsConfig,
+        prMsTeamsChannel: prMsTeamsConfig
       )
 
-    when: 'slack channel configuration gets passed through jobItem properties'
+    when: 'slack/MS Teams channel configuration gets passed through jobItem properties'
       Map data = MinionHandler.getYamlData(jobItem)
 
     then: 'there shouldn\'t be any errors'
@@ -42,6 +46,12 @@ class TestMinionHandler extends BasePipelineSpecification {
 
     and:
       data['buildProperties']['PR_SLACK_CHANNEL'] == prSlackConfig
+
+    and:
+      data['buildProperties']['MS_TEAMS_CHANNEL'] == msTeamsConfig
+
+    and:
+      data['buildProperties']['PR_MS_TEAMS_CHANNEL'] == prMsTeamsConfig
 
     where:
       slackConfig << [
@@ -62,6 +72,26 @@ class TestMinionHandler extends BasePipelineSpecification {
           BUILD_SUCCESS : 'pr-success-slack-channel'
         ]
       ]
+
+      msTeamsConfig << [
+        'ms-teams-branch-channel',
+        [
+            BUILD_FAILURE : 'failure-ms-teams-channel-webhook',
+            BUILD_ABORTED : 'aborted-ms-teams-channel-webhook',
+            BUILD_UNSTABLE: 'unstable-ms-teams-channel-webhook',
+            BUILD_SUCCESS : 'success-ms-teams-channel-webhook'
+        ]
+      ]
+
+      prMsTeamsConfig << [
+        'ms-teams-pr-channel',
+        [
+            BUILD_FAILURE : 'pr-failure-ms-teams-channel-webhook',
+            BUILD_ABORTED : 'pr-aborted-ms-teams-channel-webhook',
+            BUILD_UNSTABLE: 'pr-unstable-ms-teams-channel-webhook',
+            BUILD_SUCCESS : 'pr-success-ms-teams-channel-webhook'
+        ]
+      ]
   }
 
   def "Test minion sanitize data"() {
@@ -74,7 +104,9 @@ class TestMinionHandler extends BasePipelineSpecification {
         BUILD_PLAN_ID        : 'a-build-plan',
         BUILD_NUMBER         : 2,
         RELEASE_BUILD_NUMBER : 1,
-        BRANCH_NAME          : branchName
+        BRANCH_NAME          : branchName,
+        MS_TEAMS_CHANNEL     : 'a-ms-teams-channel',
+        PR_MS_TEAMS_CHANNEL  : 'a-pr-ms-teams-channel',
       ]
 
     when:
@@ -90,6 +122,12 @@ class TestMinionHandler extends BasePipelineSpecification {
       buildProperties[SLACK_CHANNEL] == slackChannel
 
     and:
+      buildProperties[MS_TEAMS_INTEGRATION] == msTeamsIntegration
+
+    and:
+      buildProperties[MS_TEAMS_CHANNEL] == msTeamsChannel
+
+    and:
       buildProperties[LIB_CACHE_ROOT_PATH] == libCacheRootPath
 
     and:
@@ -99,10 +137,10 @@ class TestMinionHandler extends BasePipelineSpecification {
       buildProperties[RELEASE_BUILD_NUMBER] == releaseBuildNumber
 
     where:
-      isMultibranchMinion | changeId | slackIntegration | slackChannel         | libCacheRootPath      | buildPlanId             | releaseBuildNumber | branchName
-      true                | 1        | true             | 'a-pr-slack-channel' | '/some/path/master'   | 'a-build-plan@PR-1'     | 2                  | 'PR-1'
-      true                | null     | true             | 'a-slack-channel'    | '/some/path/a-branch' | 'a-build-plan@a-branch' | 2                  | 'a-branch'
-      false               | null     | null             | 'a-slack-channel'    | '/some/path/a-branch' | 'a-build-plan'          | 1                  | 'a-branch'
+      isMultibranchMinion | changeId | slackIntegration | msTeamsIntegration | slackChannel         | msTeamsChannel          | libCacheRootPath      | buildPlanId             | releaseBuildNumber | branchName
+      true                | 1        | true             | true               | 'a-pr-slack-channel' | 'a-pr-ms-teams-channel' | '/some/path/master'   | 'a-build-plan@PR-1'     | 2                  | 'PR-1'
+      true                | null     | true             | true               | 'a-slack-channel'    | 'a-ms-teams-channel'    | '/some/path/a-branch' | 'a-build-plan@a-branch' | 2                  | 'a-branch'
+      false               | null     | null             | null               | 'a-slack-channel'    | 'a-ms-teams-channel'    | '/some/path/a-branch' | 'a-build-plan'          | 1                  | 'a-branch'
   }
 
   def "Test minion yaml is created with unfiltered properties"() {
