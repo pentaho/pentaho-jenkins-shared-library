@@ -34,11 +34,11 @@ class MSTeamsReport implements Report {
 
   static final Map<String, String> colors = [
       BUILD_SUCCESS  : '#29AF5D',
-      BUILD_UNSTABLE : '#28A9DD',
+      BUILD_UNSTABLE : '#FFFF00',
       BUILD_FAILURE  : '#F44336',
       BUILD_NOT_BUILT: '#838282',
       BUILD_ABORTED  : '#838282',
-      REPORT_WARNINGS: '#28A9DD',
+      REPORT_WARNINGS: '#FFFF00',
       REPORT_ERRORS  : '#F44336',
       REPORT_RELEASES: '#29AF5D'
   ]

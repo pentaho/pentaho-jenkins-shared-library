@@ -224,6 +224,7 @@ class LibraryProperties implements Serializable {
 
   public static final String MS_TEAMS_INTEGRATION = 'MS_TEAMS_INTEGRATION'
   public static final String MS_TEAMS_CHANNEL = 'MS_TEAMS_CHANNEL'
+  public static final String MS_TEAMS_CHANNEL_SUCCESS = 'MS_TEAMS_CHANNEL_SUCCESS'
 
 
   //public static final String LIB_VERSION = 'LIB_VERSION'
