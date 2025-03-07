@@ -39,6 +39,7 @@ import static org.hitachivantara.ci.config.LibraryProperties.MINION_LOGS_TO_KEEP
 import static org.hitachivantara.ci.config.LibraryProperties.MINION_PIPELINE_TEMPLATE
 import static org.hitachivantara.ci.config.LibraryProperties.MINION_POLL_CRON_INTERVAL
 import static org.hitachivantara.ci.config.LibraryProperties.MS_TEAMS_CHANNEL
+import static org.hitachivantara.ci.config.LibraryProperties.MS_TEAMS_CHANNEL_SUCCESS
 import static org.hitachivantara.ci.config.LibraryProperties.MS_TEAMS_INTEGRATION
 import static org.hitachivantara.ci.config.LibraryProperties.OVERRIDE_JOB_PARAMS
 import static org.hitachivantara.ci.config.LibraryProperties.OVERRIDE_PARAMS
@@ -258,10 +259,11 @@ class MinionHandler {
     buildProperties.put(LAST_JOB, null)
     buildProperties.put(RELEASE_BUILD_NUMBER, buildData.getString(RELEASE_BUILD_NUMBER))
     buildProperties.put(SLACK_CHANNEL, jobItem.slackChannel ?: buildData.get(SLACK_CHANNEL))
-    buildProperties.put(SLACK_CHANNEL_SUCCESS, getMinionSlackSuccessChannel(jobItem.slackChannel))
+    buildProperties.put(SLACK_CHANNEL_SUCCESS, getMinionSuccessChannel(jobItem.slackChannel ?: buildData.get(SLACK_CHANNEL)))
     buildProperties.put(PR_SLACK_CHANNEL, jobItem.prSlackChannel)
     buildProperties.put(PR_MS_TEAMS_CHANNEL, jobItem.prMsTeamsChannel)
     buildProperties.put(MS_TEAMS_CHANNEL, jobItem.msTeamsChannel ?: buildData.get(MS_TEAMS_CHANNEL))
+    buildProperties.put(MS_TEAMS_CHANNEL_SUCCESS, getMinionSuccessChannel(jobItem.msTeamsChannel ?: buildData.get(MS_TEAMS_CHANNEL)))
 
     return [
       buildProperties: buildProperties.getRawMap(),
@@ -273,18 +275,16 @@ class MinionHandler {
     ]
   }
 
-  static String getMinionSlackSuccessChannel(jobItemSlackChannel) {
-    BuildData buildData = BuildData.instance
-    def slackData = jobItemSlackChannel ?: buildData.get(SLACK_CHANNEL)
+  static String getMinionSuccessChannel(channelData) {
 
-    switch (slackData) {
+    switch (channelData) {
       case String:  // default list of channels configured
-        return slackData as String
+        return channelData as String
         break
 
       case Map:     // channels configured per build result
 
-        Map channelConfig = slackData
+        Map channelConfig = channelData
         return channelConfig['BUILD_SUCCESS']
         break
 
