@@ -478,7 +478,7 @@ class TestMSTeamsReport extends BasePipelineSpecification {
     where:
     buildResult | color     | emoji
     'SUCCESS'   | '#29AF5D' | '\\ud83d\\ude0e'
-    'UNSTABLE'  | '#28A9DD' | '\\ud83d\\ude28'
+    'UNSTABLE'  | '#FFFF00' | '\\ud83d\\ude28'
     'FAILURE'   | '#F44336' | '\\ud83d\\ude21'
     'NOT_BUILT' | '#838282' | '\\ud83d\\ude28'
     'ABORTED'   | '#838282' | '\\ud83d\\ude28'

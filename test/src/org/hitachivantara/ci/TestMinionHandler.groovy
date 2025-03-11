@@ -53,44 +53,36 @@ class TestMinionHandler extends BasePipelineSpecification {
     and:
       data['buildProperties']['PR_MS_TEAMS_CHANNEL'] == prMsTeamsConfig
 
+    and:
+      data['buildProperties']['SLACK_CHANNEL_SUCCESS'] == 'success-slack-channel'
+
+    and:
+      data['buildProperties']['MS_TEAMS_CHANNEL_SUCCESS'] == 'success-ms-teams-channel-webhook'
+
     where:
-      slackConfig << [
-        'slack-branch-channel',
-        [
+      slackConfig = [
           BUILD_FAILURE : 'failure-slack-channel',
           BUILD_ABORTED : 'aborted-slack-channel',
           BUILD_UNSTABLE: 'unstable-slack-channel',
           BUILD_SUCCESS : 'success-slack-channel'
-        ]
       ]
-      prSlackConfig << [
-        'slack-pr-channel',
-        [
+      prSlackConfig = [
           BUILD_FAILURE : 'pr-failure-slack-channel',
           BUILD_ABORTED : 'pr-aborted-slack-channel',
           BUILD_UNSTABLE: 'pr-unstable-slack-channel',
           BUILD_SUCCESS : 'pr-success-slack-channel'
-        ]
       ]
-
-      msTeamsConfig << [
-        'ms-teams-branch-channel',
-        [
-            BUILD_FAILURE : 'failure-ms-teams-channel-webhook',
-            BUILD_ABORTED : 'aborted-ms-teams-channel-webhook',
-            BUILD_UNSTABLE: 'unstable-ms-teams-channel-webhook',
-            BUILD_SUCCESS : 'success-ms-teams-channel-webhook'
-        ]
+      msTeamsConfig = [
+          BUILD_FAILURE : 'failure-ms-teams-channel-webhook',
+          BUILD_ABORTED : 'aborted-ms-teams-channel-webhook',
+          BUILD_UNSTABLE: 'unstable-ms-teams-channel-webhook',
+          BUILD_SUCCESS : 'success-ms-teams-channel-webhook'
       ]
-
-      prMsTeamsConfig << [
-        'ms-teams-pr-channel',
-        [
-            BUILD_FAILURE : 'pr-failure-ms-teams-channel-webhook',
-            BUILD_ABORTED : 'pr-aborted-ms-teams-channel-webhook',
-            BUILD_UNSTABLE: 'pr-unstable-ms-teams-channel-webhook',
-            BUILD_SUCCESS : 'pr-success-ms-teams-channel-webhook'
-        ]
+      prMsTeamsConfig = [
+          BUILD_FAILURE : 'pr-failure-ms-teams-channel-webhook',
+          BUILD_ABORTED : 'pr-aborted-ms-teams-channel-webhook',
+          BUILD_UNSTABLE: 'pr-unstable-ms-teams-channel-webhook',
+          BUILD_SUCCESS : 'pr-success-ms-teams-channel-webhook'
       ]
   }
 
