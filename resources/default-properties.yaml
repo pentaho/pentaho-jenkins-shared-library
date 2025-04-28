@@ -203,7 +203,7 @@ ARTIFACTS_TO_KEEP:
 DISABLE_CONCURRENT_BUILDS: false
 
 # Artifacts
-ARTIFACTORY_BASE_URL: https://one.hitachivantara.com
+ARTIFACTORY_BASE_URL: https://hitachi.jfrog.io
 
 #Frogbot
 FROGBOT_PATH_EXCLUSIONS: '*.git*;*node_modules*;*target*;*venv*;*test*;*resources-filtered*'
