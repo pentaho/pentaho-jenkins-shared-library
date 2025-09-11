@@ -45,6 +45,7 @@ import static org.hitachivantara.ci.config.LibraryProperties.DOCKER_PRIVATE_PUSH
 import static org.hitachivantara.ci.config.LibraryProperties.NODEJS_BUNDLE_REPO_URL
 import static org.hitachivantara.ci.config.LibraryProperties.NPM_RELEASE_REPO_URL
 import static org.hitachivantara.ci.config.LibraryProperties.FROGBOT_PATH_EXCLUSIONS
+import static org.hitachivantara.ci.config.LibraryProperties.NPM_REGISTRY_URL
 
 class MavenBuilder extends AbstractBuilder implements IBuilder, Serializable {
 
@@ -123,6 +124,8 @@ class MavenBuilder extends AbstractBuilder implements IBuilder, Serializable {
                                      usernameVariable: 'NEXUS_DEPLOY_USER', passwordVariable: 'NEXUS_DEPLOY_PASSWORD'),
                                  steps.string(credentialsId: scmApiTokenCredential, variable: 'JF_GIT_TOKEN')]) {
 
+            doNpmAuth()
+
             steps.log.info "Running /opt/frogbot scan-pull-request"
             if (item.containerized) {
               process("/opt/frogbot scan-pull-request", steps)
@@ -130,6 +133,18 @@ class MavenBuilder extends AbstractBuilder implements IBuilder, Serializable {
           }
         }
       }
+    }
+  }
+
+  private void doNpmAuth() {
+    String npmRegistryURL = buildData.getString(NPM_REGISTRY_URL)
+    String deployCredentials = buildData.getString(ARTIFACT_DEPLOYER_CREDENTIALS_ID)
+
+    steps.withCredentials([steps.usernamePassword(credentialsId: deployCredentials,
+      usernameVariable: 'NEXUS_DEPLOY_USER', passwordVariable: 'NEXUS_DEPLOY_PASSWORD')]) {
+      // NPM auth
+      String cmd = "echo \"//${npmRegistryURL}/:_authToken=\$NEXUS_DEPLOY_USER\" >> ~/.npmrc"
+      process(cmd, steps)
     }
   }
 
@@ -368,6 +383,9 @@ class MavenBuilder extends AbstractBuilder implements IBuilder, Serializable {
           steps.withCredentials([steps.usernamePassword(credentialsId: deployCredentials,
             usernameVariable: 'NEXUS_DEPLOY_USER', passwordVariable: 'NEXUS_DEPLOY_PASSWORD'),
             steps.string(credentialsId: scmApiTokenCredential, variable: 'SCM_API_TOKEN')]) {
+
+            // NPM auth
+            doNpmAuth()
 
             String localSettingsFile = item.settingsFile ?: settingsFile
 

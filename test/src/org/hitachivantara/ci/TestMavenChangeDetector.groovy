@@ -126,7 +126,7 @@ class TestMavenChangeDetector extends BasePipelineSpecification {
       mvnBuild()
 
     then: "the scripts yielded commands"
-      (shellRule.cmds[0] - ' -DskipTests') == expectedCommand
+      (shellRule.cmds[1] - ' -DskipTests') == expectedCommand
       workdir == expectedWorkdir
 
     where:
@@ -231,7 +231,7 @@ class TestMavenChangeDetector extends BasePipelineSpecification {
       mvnBuild()
 
     then: "the scripts yielded commands"
-      shellRule.cmds[0] == expectedCommand
+      shellRule.cmds[1] == expectedCommand
       workdir == expectedWorkdir
 
     where:
