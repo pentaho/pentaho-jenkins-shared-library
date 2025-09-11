@@ -143,7 +143,7 @@ class MavenBuilder extends AbstractBuilder implements IBuilder, Serializable {
     steps.withCredentials([steps.usernamePassword(credentialsId: deployCredentials,
       usernameVariable: 'NEXUS_DEPLOY_USER', passwordVariable: 'NEXUS_DEPLOY_PASSWORD')]) {
       // NPM auth
-      String cmd = "echo \"//${npmRegistryURL}/:_authToken=\$NEXUS_DEPLOY_USER\" >> ~/.npmrc"
+      String cmd = "echo \"//${npmRegistryURL}/:_authToken=\$NEXUS_DEPLOY_PASSWORD\" > ~/.npmrc"
       process(cmd, steps)
     }
   }
