@@ -209,4 +209,4 @@ ARTIFACTORY_BASE_URL: https://hitachi.jfrog.io
 FROGBOT_PATH_EXCLUSIONS: '*.git*;*node_modules*;*target*;*venv*;*test*;*resources-filtered*'
 
 #NPM
-NPM_REGISTRY_URL: https://one.hitachivantara.com/artifactory/api/npm/
+NPM_REGISTRY_URL: one.hitachivantara.com/artifactory/api/npm/
