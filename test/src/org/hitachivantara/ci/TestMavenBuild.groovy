@@ -61,7 +61,7 @@ class TestMavenBuild extends BasePipelineSpecification {
       Builder builder = BuilderFactory.builderFor(jobItem)
       builder.getExecution().call()
     then:
-      shellRule.cmds[0] == 'mvn clean install'
+      shellRule.cmds[1] == 'mvn clean install'
   }
 
   @Unroll
@@ -79,7 +79,7 @@ class TestMavenBuild extends BasePipelineSpecification {
       builder.getExecution().call()
 
     then:
-      shellRule.cmds[0] == expected
+      shellRule.cmds[1] == expected
 
     where:
       jobData << [
@@ -112,7 +112,7 @@ class TestMavenBuild extends BasePipelineSpecification {
       builder.getTestClosure(jobItem).call()
 
     then:
-      shellRule.cmds[0] == expected
+      shellRule.cmds[1] == expected
 
     where:
       jobData                                             || expected
@@ -132,7 +132,7 @@ class TestMavenBuild extends BasePipelineSpecification {
       builder.getTestClosure(jobItem).call()
 
     then:
-      shellRule.cmds[0] == expected
+      shellRule.cmds[1] == expected
 
     where:
       jobData = ['buildFramework': 'Maven']
