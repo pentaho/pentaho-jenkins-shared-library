@@ -64,6 +64,17 @@ class TestMavenBuild extends BasePipelineSpecification {
       shellRule.cmds[1] == 'mvn clean install'
   }
 
+  def "test NPM settings"() {
+    setup:
+    JobItem jobItem = new JobItem(buildFramework: 'Maven', directives: 'clean install')
+    when:
+    Builder builder = BuilderFactory.builderFor(jobItem)
+    builder.getExecution().call()
+    then:
+    String expected= 'echo "registry=https://one.hitachivantara.com/artifactory/api/npm/npm" > ~/.npmrc && echo "//one.hitachivantara.com/artifactory/api/npm/:_authToken=$REGISTRY_TOKEN" >> ~/.npmrc && echo "always-auth=true" >> ~/.npmrc'
+    shellRule.cmds[0].trim() == expected
+  }
+
   @Unroll
   def "build command for #jobData"() {
     setup:
