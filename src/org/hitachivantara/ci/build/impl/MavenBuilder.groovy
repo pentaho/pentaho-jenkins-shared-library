@@ -45,7 +45,8 @@ import static org.hitachivantara.ci.config.LibraryProperties.DOCKER_PRIVATE_PUSH
 import static org.hitachivantara.ci.config.LibraryProperties.NODEJS_BUNDLE_REPO_URL
 import static org.hitachivantara.ci.config.LibraryProperties.NPM_RELEASE_REPO_URL
 import static org.hitachivantara.ci.config.LibraryProperties.FROGBOT_PATH_EXCLUSIONS
-import static org.hitachivantara.ci.config.LibraryProperties.NPM_REGISTRY_URL
+import static org.hitachivantara.ci.config.LibraryProperties.NPM_REGISTRY_URI
+import static org.hitachivantara.ci.config.LibraryProperties.NPM_DEFAULT_REGISTRY
 
 class MavenBuilder extends AbstractBuilder implements IBuilder, Serializable {
 
@@ -137,13 +138,18 @@ class MavenBuilder extends AbstractBuilder implements IBuilder, Serializable {
   }
 
   private void doNpmAuth() {
-    String npmRegistryURL = buildData.getString(NPM_REGISTRY_URL)
+    String npmRegistryURI = buildData.getString(NPM_REGISTRY_URI)
+    String npmDefaultRegistry = buildData.getString(NPM_DEFAULT_REGISTRY)
     String deployCredentials = buildData.getString(ARTIFACT_DEPLOYER_CREDENTIALS_ID)
 
     steps.withCredentials([steps.usernamePassword(credentialsId: deployCredentials,
-      usernameVariable: 'NEXUS_DEPLOY_USER', passwordVariable: 'NEXUS_DEPLOY_PASSWORD')]) {
-      // NPM auth
-      String cmd = "echo \"//${npmRegistryURL}:_authToken=\$NEXUS_DEPLOY_PASSWORD\" > ~/.npmrc"
+      usernameVariable: 'REGISTRY_USER', passwordVariable: 'REGISTRY_TOKEN')]) {
+      // NPM settings
+      String cmd = """
+      echo "registry=${npmDefaultRegistry}" > ~/.npmrc && \
+      echo "//${npmRegistryURI}:_authToken=\$REGISTRY_TOKEN" >> ~/.npmrc && \
+      echo "always-auth=true" >> ~/.npmrc
+      """
       process(cmd, steps)
     }
   }

@@ -249,6 +249,7 @@ class LibraryProperties implements Serializable {
   public static final String FROGBOT_PATH_EXCLUSIONS = 'FROGBOT_PATH_EXCLUSIONS'
   public static final String FROGBOT_LOG_LEVEL = 'FROGBOT_LOG_LEVEL'
 
-  public static final String NPM_REGISTRY_URL = 'NPM_REGISTRY_URL'
+  public static final String NPM_REGISTRY_URI = 'NPM_REGISTRY_URI'
+  public static final String NPM_DEFAULT_REGISTRY = 'NPM_DEFAULT_REGISTRY'
 
 }
