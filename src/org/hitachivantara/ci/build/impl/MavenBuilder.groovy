@@ -147,8 +147,7 @@ class MavenBuilder extends AbstractBuilder implements IBuilder, Serializable {
       // NPM settings
       String cmd = """
       echo "registry=${npmDefaultRegistry}" > ~/.npmrc && \
-      echo "//${npmRegistryURI}:_authToken=\$REGISTRY_TOKEN" >> ~/.npmrc && \
-      echo "always-auth=true" >> ~/.npmrc
+      echo "//${npmRegistryURI}:_authToken=\$REGISTRY_TOKEN" >> ~/.npmrc
       """
       process(cmd, steps)
     }
