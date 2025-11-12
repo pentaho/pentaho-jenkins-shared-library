@@ -210,4 +210,4 @@ FROGBOT_PATH_EXCLUSIONS: '*.git*;*node_modules*;*target*;*venv*;*test*;*resource
 
 #NPM
 NPM_REGISTRY_URI: one.hitachivantara.com/artifactory/api/npm/
-NPM_DEFAULT_REGISTRY: https://repo.orl.eng.hitachivantara.com/artifactory/npm/
+NPM_DEFAULT_REGISTRY: https://one.hitachivantara.com/artifactory/api/npm/npm/
