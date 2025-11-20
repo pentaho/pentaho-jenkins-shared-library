@@ -199,7 +199,9 @@ class TestMavenBuild extends BasePipelineSpecification {
           commandBuilder.userProperties.containsKey('sonar.pullrequest.base')
           commandBuilder.userProperties.containsKey('sonar.pullrequest.github.repository')
           commandBuilder.userProperties.containsKey('sonar.scm.revision')
+          commandBuilder.userProperties.containsKey('sonar.links.scm')
         }
+        commandBuilder.userProperties.get('sonar.links.scm') == 'https://github.com/pentaho/my-repo'
       }
 
     where:
@@ -208,7 +210,7 @@ class TestMavenBuild extends BasePipelineSpecification {
       false | '-pl core,!engine'                      || '.,core'                                                   | '!engine'          | '.,core,!engine'
       true  | '-pl plugins/core/impl,plugins/core/ui' || '.,plugins,plugins/core,plugins/core/impl,plugins/core/ui' | null               | '.,plugins,plugins/core,plugins/core/impl,plugins/core/ui'
 
-      jobData = ['buildFramework': 'Maven']
+      jobData = ['buildFramework': 'Maven', 'scmUrl': 'https://github.com/pentaho/my-repo.git']
   }
 
 }
