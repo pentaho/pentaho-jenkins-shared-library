@@ -543,6 +543,12 @@ class MavenBuilder extends AbstractBuilder implements IBuilder, Serializable {
         commandBuilder << "-pl ${(inclusions + exclusions).join(',')}"
       }
 
+      // them scmUrl without the '.git' suffix
+      String repoUrl = item.getScmUrl()
+      repoUrl = repoUrl.replaceFirst(/.git$/, "")
+
+      commandBuilder << "-Dsonar.links.scm=${repoUrl}"
+
       if (buildData.isPullRequest()) {
         commandBuilder << "-Dsonar.pullrequest.branch=${buildData.getString(BRANCH_NAME)}"
         commandBuilder << "-Dsonar.pullrequest.key=${buildData.get(CHANGE_ID)}"
