@@ -10,7 +10,7 @@
 
   <name>Jenkins Shared Libraries</name>
   <description>Shared libraries to support Hitachi Vantara Jenkins project builds</description>
-
+<!-- -->
   <licenses>
     <license>
       <name>MIT License</name>
