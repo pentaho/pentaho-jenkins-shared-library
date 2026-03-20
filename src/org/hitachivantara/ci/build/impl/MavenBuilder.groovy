@@ -106,6 +106,22 @@ class MavenBuilder extends AbstractBuilder implements IBuilder, Serializable {
     String frogbotExclusion = buildData.getString(FROGBOT_PATH_EXCLUSIONS)
     String frogbotLogLevel = buildData.getString(FROGBOT_LOG_LEVEL) ?: 'INFO'
 
+    CommandBuilder command = getCommandBuilder()
+    List<String> frogbotInclusions = command.getProjectList()
+    List<String> frogbotExclusions = command.getExcludedProjectList()
+
+    Set<String> allFrogbotModuleParts = ['.']
+    frogbotInclusions.each { String modulePath ->
+      modulePath.tokenize('/').eachWithIndex { String part, int i ->
+        allFrogbotModuleParts << modulePath.tokenize('/')[0..i].join('/')
+      }
+    }
+
+    frogbotInclusions = allFrogbotModuleParts.sort() as List<String>
+    frogbotExclusions = frogbotExclusions.collect { "!${it}" }.sort() as List<String>
+
+    String projectListOption = (frogbotInclusions + frogbotExclusions) ? "-pl ${(frogbotInclusions + frogbotExclusions).join(',')}" : ""
+
     return { ->
       steps.dir(item.buildWorkDir) {
         steps.withEnv([
@@ -117,7 +133,7 @@ class MavenBuilder extends AbstractBuilder implements IBuilder, Serializable {
             "JF_GIT_OWNER=${gitOwner}",
             "JF_PATH_EXCLUSIONS=${frogbotExclusion}",
             "JFROG_CLI_LOG_LEVEL=${frogbotLogLevel}",
-            "MAVEN_ARGS=-V -s ${localSettingsFile} -Dmaven.repo.local='${localRepoPath}' -DnodeDownloadRoot='${nodeDownloadRoot}' -DnpmDownloadRoot='${npmDownloadRoot}'"
+            "MAVEN_ARGS=-V -s ${localSettingsFile} ${projectListOption} -Dmaven.repo.local='${localRepoPath}' -DnodeDownloadRoot='${nodeDownloadRoot}' -DnpmDownloadRoot='${npmDownloadRoot}'"
         ]) {
           steps.withCredentials([steps.usernamePassword(credentialsId: deployCredentials,
               usernameVariable: 'JF_USER', passwordVariable: 'JF_PASSWORD'),
