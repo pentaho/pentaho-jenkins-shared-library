@@ -199,12 +199,6 @@ void frogbot(BuildData buildData, JobItem jobItem) {
   Builder builder = BuilderFactory.builderFor(jobItem)
   Closure execution = builder.frogbotExecution
 
-  // apply retries
-  if (buildData.getInt(BUILD_RETRIES)) {
-    Closure current = execution
-    execution = { -> retry(buildData.getInt(BUILD_RETRIES), current) }
-  }
-
   // apply container
   if (jobItem.containerized) {
     Closure current = execution

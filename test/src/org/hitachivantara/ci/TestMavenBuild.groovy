@@ -219,6 +219,49 @@ class TestMavenBuild extends BasePipelineSpecification {
 
   // ── getFrogbotExecution ──────────────────────────────────────────────────────
 
+  /** Restore the URL metaclass after each test so no other tests are affected. */
+  def cleanup() {
+    URL.metaClass.openConnection = null
+  }
+
+  /**
+   * Shared setup for PR-based frogbot tests.
+   *
+   * 1. Stubs {@code URL.openConnection()} so the GitHub module-validation call
+   *    always returns HTTP 200 without any real network I/O.
+   * 2. Registers a {@code withCredentials} mock that injects Jenkins credential
+   *    variables (e.g. {@code JF_GIT_TOKEN}) into the closure's delegate so they
+   *    resolve correctly in a unit-test context.  The default {@code OWNER_FIRST}
+   *    strategy is kept intentionally – MavenBuilder's own properties
+   *    ({@code buildData}, {@code steps}, …) still resolve through the owner chain,
+   *    while variables not present on the owner fall back to the delegate.
+   */
+  private void registerFrogbotCredentialsMock() {
+    URL.metaClass.openConnection = { ->
+      return new HttpURLConnection(null) {
+        @Override void connect() throws IOException {}
+        @Override void disconnect() {}
+        @Override boolean usingProxy() { false }
+        @Override InputStream getInputStream() { new ByteArrayInputStream('[]'.bytes) }
+        @Override int getResponseCode() { 200 }
+        @Override void setRequestProperty(String key, String value) {}
+      }
+    }
+
+    registerAllowedMethod("withCredentials", [List, Closure], { List creds, Closure closure ->
+      closure.delegate = [
+        JF_GIT_TOKEN         : 'test-token',
+        JF_USER              : 'user',
+        JF_PASSWORD          : 'pass',
+        NEXUS_DEPLOY_USER    : 'user',
+        NEXUS_DEPLOY_PASSWORD: 'pass',
+        REGISTRY_USER        : 'user',
+        REGISTRY_TOKEN       : 'token'
+      ]
+      closure.call()
+    })
+  }
+
   def "getFrogbotExecution returns empty closure and runs no shell commands on non-PR build"() {
     setup:
       JobItem jobItem = new JobItem(buildFramework: 'Maven', scmUrl: 'https://github.com/pentaho/my-repo.git')
@@ -239,9 +282,10 @@ class TestMavenBuild extends BasePipelineSpecification {
           scmUrl: 'https://github.com/pentaho/my-repo.git',
           dockerImage: 'my-docker-image:latest'
       )
+      Builder builder = BuilderFactory.builderFor(jobItem)
+      registerFrogbotCredentialsMock()
 
     when:
-      Builder builder = BuilderFactory.builderFor(jobItem)
       builder.getFrogbotExecution().call()
 
     then:
@@ -256,9 +300,10 @@ class TestMavenBuild extends BasePipelineSpecification {
           buildFramework: 'Maven',
           scmUrl: 'https://github.com/pentaho/my-repo.git'
       )
+      Builder builder = BuilderFactory.builderFor(jobItem)
+      registerFrogbotCredentialsMock()
 
     when:
-      Builder builder = BuilderFactory.builderFor(jobItem)
       builder.getFrogbotExecution().call()
 
     then:
@@ -278,6 +323,8 @@ class TestMavenBuild extends BasePipelineSpecification {
           scmUrl: 'https://github.com/pentaho/my-repo.git',
           dockerImage: 'my-image'
       )
+      Builder builder = BuilderFactory.builderFor(jobItem)
+      registerFrogbotCredentialsMock()
 
       List<String> capturedEnvVars = null
       registerAllowedMethod('withEnv', [List, Closure], { List envVars, Closure closure ->
@@ -286,7 +333,6 @@ class TestMavenBuild extends BasePipelineSpecification {
       })
 
     when:
-      Builder builder = BuilderFactory.builderFor(jobItem)
       builder.getFrogbotExecution().call()
 
     then:
@@ -307,6 +353,8 @@ class TestMavenBuild extends BasePipelineSpecification {
       configRule.buildProperties[CHANGE_ID] = '42'
       jobData.directives = directives
       JobItem jobItem = configRule.newJobItem(jobData)
+      Builder builder = BuilderFactory.builderFor(jobItem)
+      registerFrogbotCredentialsMock()
 
       List<String> capturedEnvVars = null
       registerAllowedMethod('withEnv', [List, Closure], { List envVars, Closure closure ->
@@ -315,7 +363,6 @@ class TestMavenBuild extends BasePipelineSpecification {
       })
 
     when:
-      Builder builder = BuilderFactory.builderFor(jobItem)
       builder.getFrogbotExecution().call()
 
     then:
