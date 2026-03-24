@@ -21,6 +21,9 @@ import spock.lang.Unroll
 import static org.hitachivantara.ci.config.LibraryProperties.MAVEN_TEST_OPTS
 import static org.hitachivantara.ci.config.LibraryProperties.CHANGE_ID
 import static org.hitachivantara.ci.config.LibraryProperties.PR_STATUS_REPORTS
+import static org.hitachivantara.ci.config.LibraryProperties.ARTIFACTORY_BASE_URL
+import static org.hitachivantara.ci.config.LibraryProperties.FROGBOT_LOG_LEVEL
+import static org.hitachivantara.ci.config.LibraryProperties.FROGBOT_PATH_EXCLUSIONS
 
 class TestMavenBuild extends BasePipelineSpecification {
   JenkinsShellRule shellRule = new JenkinsShellRule(this)
@@ -213,4 +216,164 @@ class TestMavenBuild extends BasePipelineSpecification {
       jobData = ['buildFramework': 'Maven', 'scmUrl': 'https://github.com/pentaho/my-repo.git']
   }
 
+
+  // ── getFrogbotExecution ──────────────────────────────────────────────────────
+
+  /** Restore the URL metaclass after each test so no other tests are affected. */
+  def cleanup() {
+    URL.metaClass.openConnection = null
+  }
+
+  /**
+   * Shared setup for PR-based frogbot tests.
+   *
+   * 1. Stubs {@code URL.openConnection()} so the GitHub module-validation call
+   *    always returns HTTP 200 without any real network I/O.
+   * 2. Registers a {@code withCredentials} mock that injects Jenkins credential
+   *    variables (e.g. {@code JF_GIT_TOKEN}) into the closure's delegate so they
+   *    resolve correctly in a unit-test context.  The default {@code OWNER_FIRST}
+   *    strategy is kept intentionally – MavenBuilder's own properties
+   *    ({@code buildData}, {@code steps}, …) still resolve through the owner chain,
+   *    while variables not present on the owner fall back to the delegate.
+   */
+  private void registerFrogbotCredentialsMock() {
+    URL.metaClass.openConnection = { ->
+      return new HttpURLConnection(null) {
+        @Override void connect() throws IOException {}
+        @Override void disconnect() {}
+        @Override boolean usingProxy() { false }
+        @Override InputStream getInputStream() { new ByteArrayInputStream('[]'.bytes) }
+        @Override int getResponseCode() { 200 }
+        @Override void setRequestProperty(String key, String value) {}
+      }
+    }
+
+    registerAllowedMethod("withCredentials", [List, Closure], { List creds, Closure closure ->
+      closure.delegate = [
+        JF_GIT_TOKEN         : 'test-token',
+        JF_USER              : 'user',
+        JF_PASSWORD          : 'pass',
+        NEXUS_DEPLOY_USER    : 'user',
+        NEXUS_DEPLOY_PASSWORD: 'pass',
+        REGISTRY_USER        : 'user',
+        REGISTRY_TOKEN       : 'token'
+      ]
+      closure.call()
+    })
+  }
+
+  def "getFrogbotExecution returns empty closure and runs no shell commands on non-PR build"() {
+    setup:
+      JobItem jobItem = new JobItem(buildFramework: 'Maven', scmUrl: 'https://github.com/pentaho/my-repo.git')
+
+    when:
+      Builder builder = BuilderFactory.builderFor(jobItem)
+      builder.getFrogbotExecution().call()
+
+    then:
+      shellRule.cmds.isEmpty()
+  }
+
+  def "getFrogbotExecution runs /opt/frogbot scan-pull-request on PR build with containerized job item"() {
+    setup:
+      configRule.buildProperties[CHANGE_ID] = '42'
+      JobItem jobItem = new JobItem(
+          buildFramework: 'Maven',
+          scmUrl: 'https://github.com/pentaho/my-repo.git',
+          dockerImage: 'my-docker-image:latest'
+      )
+      Builder builder = BuilderFactory.builderFor(jobItem)
+      registerFrogbotCredentialsMock()
+
+    when:
+      builder.getFrogbotExecution().call()
+
+    then:
+      shellRule.cmds.size() == 2
+      shellRule.cmds[1] == '/opt/frogbot scan-pull-request'
+  }
+
+  def "getFrogbotExecution skips frogbot command on PR build when job item is not containerized"() {
+    setup:
+      configRule.buildProperties[CHANGE_ID] = '42'
+      JobItem jobItem = new JobItem(
+          buildFramework: 'Maven',
+          scmUrl: 'https://github.com/pentaho/my-repo.git'
+      )
+      Builder builder = BuilderFactory.builderFor(jobItem)
+      registerFrogbotCredentialsMock()
+
+    when:
+      builder.getFrogbotExecution().call()
+
+    then:
+      shellRule.cmds.size() == 1
+      !shellRule.cmds.any { it.contains('frogbot') }
+  }
+
+  def "getFrogbotExecution sets correct JFrog environment variables on PR build"() {
+    setup:
+      configRule.buildProperties[CHANGE_ID] = '123'
+      configRule.buildProperties[ARTIFACTORY_BASE_URL] = 'https://custom.jfrog.io'
+      configRule.buildProperties[FROGBOT_PATH_EXCLUSIONS] = '*.git*;*node_modules*'
+      configRule.buildProperties[FROGBOT_LOG_LEVEL] = 'DEBUG'
+
+      JobItem jobItem = new JobItem(
+          buildFramework: 'Maven',
+          scmUrl: 'https://github.com/pentaho/my-repo.git',
+          dockerImage: 'my-image'
+      )
+      Builder builder = BuilderFactory.builderFor(jobItem)
+      registerFrogbotCredentialsMock()
+
+      List<String> capturedEnvVars = null
+      registerAllowedMethod('withEnv', [List, Closure], { List envVars, Closure closure ->
+        capturedEnvVars = envVars
+        closure.call()
+      })
+
+    when:
+      builder.getFrogbotExecution().call()
+
+    then:
+      verifyAll {
+        capturedEnvVars.any { it == 'JF_URL=https://custom.jfrog.io' }
+        capturedEnvVars.any { it == 'JF_GIT_PROVIDER=github' }
+        capturedEnvVars.any { it == 'JF_GIT_REPO=my-repo' }
+        capturedEnvVars.any { it == 'JF_GIT_OWNER=pentaho' }
+        capturedEnvVars.any { it == 'JF_GIT_PULL_REQUEST_ID=123' }
+        capturedEnvVars.any { it == 'JF_PATH_EXCLUSIONS=*.git*;*node_modules*' }
+        capturedEnvVars.any { it == 'JFROG_CLI_LOG_LEVEL=DEBUG' }
+      }
+  }
+
+  @Unroll
+  def "getFrogbotExecution computes correct project list in MAVEN_ARGS for directives [#directives]"() {
+    setup:
+      configRule.buildProperties[CHANGE_ID] = '42'
+      jobData.directives = directives
+      JobItem jobItem = configRule.newJobItem(jobData)
+      Builder builder = BuilderFactory.builderFor(jobItem)
+      registerFrogbotCredentialsMock()
+
+      List<String> capturedEnvVars = null
+      registerAllowedMethod('withEnv', [List, Closure], { List envVars, Closure closure ->
+        capturedEnvVars = envVars
+        closure.call()
+      })
+
+    when:
+      builder.getFrogbotExecution().call()
+
+    then:
+      capturedEnvVars?.find { it.startsWith('MAVEN_ARGS=') }?.contains(expectedProjectList)
+
+    where:
+      directives              || expectedProjectList
+      '-pl core'              || '-pl .,core'
+      '-pl a/b/c'             || '-pl .,a,a/b,a/b/c'
+      '-pl core,!engine'      || '-pl .,core,!engine'
+
+      jobData = [buildFramework: 'Maven', scmUrl: 'https://github.com/pentaho/my-repo.git', dockerImage: 'my-image']
+  }
 }

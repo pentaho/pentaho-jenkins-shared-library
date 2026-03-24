@@ -106,25 +106,62 @@ class MavenBuilder extends AbstractBuilder implements IBuilder, Serializable {
     String frogbotExclusion = buildData.getString(FROGBOT_PATH_EXCLUSIONS)
     String frogbotLogLevel = buildData.getString(FROGBOT_LOG_LEVEL) ?: 'INFO'
 
+    CommandBuilder command = getCommandBuilder()
+    List<String> frogbotInclusions = command.getProjectList()
+    List<String> frogbotExclusions = command.getExcludedProjectList()
+
+    Set<String> allFrogbotModuleParts = ['.']
+    frogbotInclusions.each { String modulePath ->
+      modulePath.tokenize('/').eachWithIndex { String part, int i ->
+        allFrogbotModuleParts << modulePath.tokenize('/')[0..i].join('/')
+      }
+    }
+
+    frogbotInclusions = allFrogbotModuleParts.sort() as List<String>
+    frogbotExclusions = frogbotExclusions.collect { "!${it}" }.sort() as List<String>
+
     return { ->
       steps.dir(item.buildWorkDir) {
-        steps.withEnv([
-            "RESOLVE_REPO_MIRROR=${resolveRepo}",
-            "JF_URL=${artifactoryURL}",
-            "JF_GIT_PROVIDER=${gitProvider}",
-            "JF_GIT_REPO=${gitRepo}",
-            "JF_GIT_PULL_REQUEST_ID=${gitPrNbr}",
-            "JF_GIT_OWNER=${gitOwner}",
-            "JF_PATH_EXCLUSIONS=${frogbotExclusion}",
-            "JFROG_CLI_LOG_LEVEL=${frogbotLogLevel}",
-            "MAVEN_ARGS=-V -s ${localSettingsFile} -Dmaven.repo.local='${localRepoPath}' -DnodeDownloadRoot='${nodeDownloadRoot}' -DnpmDownloadRoot='${npmDownloadRoot}'"
-        ]) {
-          steps.withCredentials([steps.usernamePassword(credentialsId: deployCredentials,
-              usernameVariable: 'JF_USER', passwordVariable: 'JF_PASSWORD'),
-                                 steps.usernamePassword(credentialsId: deployCredentials,
-                                     usernameVariable: 'NEXUS_DEPLOY_USER', passwordVariable: 'NEXUS_DEPLOY_PASSWORD'),
-                                 steps.string(credentialsId: scmApiTokenCredential, variable: 'JF_GIT_TOKEN')]) {
+        steps.withCredentials([steps.usernamePassword(credentialsId: deployCredentials,
+            usernameVariable: 'JF_USER', passwordVariable: 'JF_PASSWORD'),
+                               steps.usernamePassword(credentialsId: deployCredentials,
+                                   usernameVariable: 'NEXUS_DEPLOY_USER', passwordVariable: 'NEXUS_DEPLOY_PASSWORD'),
+                               steps.string(credentialsId: scmApiTokenCredential, variable: 'JF_GIT_TOKEN')]) {
 
+          String targetBranch = buildData.getString(CHANGE_TARGET)
+          String owner = item.scmInfo.organization
+          String repo = item.scmInfo.repository
+
+          def validModules = frogbotInclusions.findAll { String module ->
+            def responseCode = request("https://api.github.com/repos/${owner}/${repo}/contents/${module}?ref=${targetBranch}", steps.env.JF_GIT_TOKEN)
+            final boolean moduleExists = responseCode == 200
+            steps.log.info("Module '${module}' existence in ${owner}/${repo}@${targetBranch}: ${moduleExists} (HTTP ${responseCode})")
+            return moduleExists
+          }
+
+          String projectListOption = ""
+          steps.log.info("Frogbot inclusions: ${frogbotInclusions}")
+          steps.log.info("Valid modules for Frogbot scan: ${validModules}")
+          // Only include the -pl option if all the specified modules are valid in both branches
+          if (validModules == frogbotInclusions) {
+            projectListOption = (frogbotInclusions + frogbotExclusions) ? "-pl ${(frogbotInclusions + frogbotExclusions).join(',')}" : ""
+          } else {
+            steps.log.warn("Not all specified modules are valid in the target branch. Skipping module filtering for Frogbot scan.")
+          }
+
+          steps.withEnv([
+              "RESOLVE_REPO_MIRROR=${resolveRepo}",
+              "JF_URL=${artifactoryURL}",
+              "JF_GIT_PROVIDER=${gitProvider}",
+              "JF_GIT_REPO=${gitRepo}",
+              "JF_GIT_PULL_REQUEST_ID=${gitPrNbr}",
+              "JF_GIT_OWNER=${gitOwner}",
+              "JF_PATH_EXCLUSIONS=${frogbotExclusion}",
+              "JFROG_CLI_LOG_LEVEL=${frogbotLogLevel}",
+              "MAVEN_ARGS=-V -s ${localSettingsFile} ${projectListOption} -Dmaven.repo.local='${localRepoPath}' -DnodeDownloadRoot='${nodeDownloadRoot}' -DnpmDownloadRoot='${npmDownloadRoot}'"
+          ]) {
+            String mavenArgs = steps.env.MAVEN_ARGS
+            steps.log.info("MAVEN_ARGS: ${mavenArgs}")
             doNpmAuth()
 
             steps.log.info "Running /opt/frogbot scan-pull-request"
@@ -135,6 +172,14 @@ class MavenBuilder extends AbstractBuilder implements IBuilder, Serializable {
         }
       }
     }
+  }
+
+  private def request(String url, token) {
+    def conn = new URL(url).openConnection() as HttpURLConnection
+    conn.setRequestProperty("Authorization", "Bearer ${token}")
+    conn.setRequestProperty("Accept", "application/vnd.github+json")
+    conn.connect()
+    return conn.responseCode
   }
 
   private void doNpmAuth() {
