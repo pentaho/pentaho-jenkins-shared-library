@@ -446,4 +446,113 @@ class TestSlackReport extends BasePipelineSpecification {
     expectedColor = '#838282'
   }
 
+  def "test send echoes timestamp when slack responds"() {
+    setup:
+      List<String> echoMessages = []
+      registerAllowedMethod('echo', [String.class], { String msg -> echoMessages << msg })
+      registerAllowedMethod('slackSend', [Map.class], { Map args ->
+        return [ts: '1618300000.123456']
+      })
+
+      SlackReport report = new SlackReport(mockScript)
+      configRule.addProperties([
+        SLACK_INTEGRATION: true,
+        SLACK_CHANNEL    : '#test-channel'
+      ])
+      report.buildData = configRule.buildData
+
+    when:
+      report.send()
+
+    then:
+      noExceptionThrown()
+
+    and:
+      echoMessages.any { it.contains("1618300000.123456") }
+      echoMessages.any { it.contains("Slack notification timestamp") }
+  }
+
+  def "test send echoes no-response message when slack returns null"() {
+    setup:
+      List<String> echoMessages = []
+      registerAllowedMethod('echo', [String.class], { String msg -> echoMessages << msg })
+      registerAllowedMethod('slackSend', [Map.class], { Map args -> return null })
+
+      SlackReport report = new SlackReport(mockScript)
+      configRule.addProperties([
+        SLACK_INTEGRATION: true,
+        SLACK_CHANNEL    : '#test-channel'
+      ])
+      report.buildData = configRule.buildData
+
+    when:
+      report.send()
+
+    then:
+      noExceptionThrown()
+
+    and:
+      echoMessages.contains('No response from Slack plugin')
+  }
+
+  def "test send does nothing when slack integration is disabled"() {
+    setup:
+      List<String> echoMessages = []
+      registerAllowedMethod('echo', [String.class], { String msg -> echoMessages << msg })
+
+      boolean slackSendCalled = false
+      registerAllowedMethod('slackSend', [Map.class], { Map args -> slackSendCalled = true })
+
+      SlackReport report = new SlackReport(mockScript)
+      configRule.addProperties([SLACK_INTEGRATION: false])
+      report.buildData = configRule.buildData
+
+    when:
+      report.send()
+
+    then:
+      noExceptionThrown()
+
+    and:
+      !slackSendCalled
+      echoMessages.isEmpty()
+  }
+
+  @Unroll
+  def "test send resolves channel from build result when SLACK_CHANNEL is a map (#result)"() {
+    setup:
+      mockScript.binding.setVariable('currentBuild', GroovyMock(RunWrapper) {
+        getCurrentResult() >> result
+      })
+
+      Map capturedArgs = [:]
+      List<String> echoMessages = []
+      registerAllowedMethod('echo', [String.class], { String msg -> echoMessages << msg })
+      registerAllowedMethod('slackSend', [Map.class], { Map args ->
+        capturedArgs.putAll(args)
+        return null
+      })
+
+      SlackReport report = new SlackReport(mockScript)
+      configRule.addProperties([
+        SLACK_INTEGRATION: true,
+        SLACK_CHANNEL    : ['BUILD_SUCCESS': '#success-channel', 'BUILD_FAILURE': '#failure-channel']
+      ])
+      report.buildData = configRule.buildData
+
+    when:
+      report.send()
+
+    then:
+      noExceptionThrown()
+
+    and:
+      capturedArgs.channel == expectedChannel
+
+    where:
+      result    | expectedChannel
+      'SUCCESS' | '#success-channel'
+      'FAILURE' | '#failure-channel'
+  }
+
 }

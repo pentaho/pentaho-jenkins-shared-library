@@ -106,13 +106,18 @@ class SlackReport implements Report {
         channels = ''
       }
 
-      dsl.slackSend(
+      def slackResponse = dsl.slackSend(
           channel: channels,
           teamDomain: buildData.getString(SLACK_TEAM_DOMAIN),
           tokenCredentialId: buildData.getString(SLACK_CREDENTIALS_ID),
           failOnError: false,
           attachments: JsonOutput.toJson(attachments)
       )
+      if ( slackResponse ) {
+        dsl.echo "Slack notification timestamp: '${slackResponse.ts}'; and thread id: '${slackResponse.threadId}'. Use them to reply to this message in the future."
+      } else {
+        dsl.echo "No response from Slack plugin"
+      }
     }
   }
 
