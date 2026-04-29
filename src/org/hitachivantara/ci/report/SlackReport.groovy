@@ -285,23 +285,25 @@ class SlackReport implements Report {
 
       List<Map<String,Object>> commitLogs
       jobItems.each { JobItem jobItem ->
-        dsl.dir(jobItem.checkoutDir) {
-          commitLogs = ScmUtils.getCommitLog(dsl, jobItem)
+        commitLogs = dsl.currentBuild.changeSets.findAll { changeSet ->
+          changeSet.browser?.repoUrl?.contains("${jobItem.scmInfo.organization}/${jobItem.scmInfo.repository}")
+        }.collectMany { changeSet ->
+          changeSet.items.collect { entry ->
+            [(ScmUtils.COMMIT_URL): entry.commitId ? "${jobItem.scmUrl}/commit/${entry.commitId}" : jobItem.scmUrl,
+             (ScmUtils.COMMIT_ID) : entry.commitId ?: '',
+             (ScmUtils.COMMIT_TITLE): entry.msg ?: '']
+          }
         }
-
-        // print jobID and branch
-        // sb << '- ' << "${jobItem.scmInfo.organization}/${jobItem.scmInfo.repository} @ ${jobItem.scmBranch}"
 
         commitLogs.each { Map<String,String> changelog ->
           // print commit log
           String commitUrl = changelog[ScmUtils.COMMIT_URL] ?: jobItem.scmUrl
-          sb << "<${commitUrl}|${StringUtils.truncate(changelog[ScmUtils.COMMIT_TITLE], 55)}>"
+          sb << "- <${commitUrl}|${StringUtils.truncate(changelog[ScmUtils.COMMIT_TITLE], 55)}>"
         }
         sb << '\n'
       }
 
       return [
-          title: 'Changes',
           value: sb.toString(),
           short: false
       ]
