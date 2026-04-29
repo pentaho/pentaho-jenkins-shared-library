@@ -53,7 +53,8 @@ class SlackReport implements Report {
       BUILD_ABORTED  : '#838282',
       REPORT_WARNINGS: 'warning',
       REPORT_ERRORS  : 'danger',
-      REPORT_RELEASES: 'good'
+      REPORT_RELEASES: 'good',
+      REPORT_CHANGES: '#439FE0'
   ]
 
   SlackReport(Script dsl) {
@@ -83,6 +84,10 @@ class SlackReport implements Report {
       }
       if (buildStatus.hasReleases()) {
         attachments << buildStatusReleasesAttach(buildStatus.releases)
+      }
+      Map changesAttach = buildChangesAttach(':twisted_rightwards_arrows: *Changes*', colors.REPORT_CHANGES)
+      if (changesAttach['fields']) {
+        attachments << changesAttach
       }
     }
     return this
@@ -263,6 +268,47 @@ class SlackReport implements Report {
           value: sb.toString(),
           short: false
       ]
+    }
+
+    return attachment
+  }
+
+  private Map buildChangesAttach(String title, String color) {
+    Map attachment = [
+        pretext  : title,
+        color    : color,
+        mrkdwn_in: ['pretext']
+    ]
+
+    List fields = buildData.buildMap.collect { String jobGroup, List<JobItem> jobItems ->
+      StringBuilder sb = new StringBuilder()
+
+      List<Map<String,Object>> commitLogs
+      jobItems.each { JobItem jobItem ->
+        dsl.dir(jobItem.checkoutDir) {
+          commitLogs = ScmUtils.getCommitLog(dsl, jobItem)
+        }
+
+        // print jobID and branch
+        // sb << '- ' << "${jobItem.scmInfo.organization}/${jobItem.scmInfo.repository} @ ${jobItem.scmBranch}"
+
+        commitLogs.each { Map<String,String> changelog ->
+          // print commit log
+          String commitUrl = changelog[ScmUtils.COMMIT_URL] ?: jobItem.scmUrl
+          sb << "<${commitUrl}|${StringUtils.truncate(changelog[ScmUtils.COMMIT_TITLE], 55)}>"
+        }
+        sb << '\n'
+      }
+
+      return [
+          title: 'Changes',
+          value: sb.toString(),
+          short: false
+      ]
+    }.findAll { it.value?.trim() }
+
+    if (fields) {
+      attachment['fields'] = fields
     }
 
     return attachment
