@@ -53,7 +53,8 @@ class SlackReport implements Report {
       BUILD_ABORTED  : '#838282',
       REPORT_WARNINGS: 'warning',
       REPORT_ERRORS  : 'danger',
-      REPORT_RELEASES: 'good'
+      REPORT_RELEASES: 'good',
+      REPORT_CHANGES: '#439FE0'
   ]
 
   SlackReport(Script dsl) {
@@ -83,6 +84,10 @@ class SlackReport implements Report {
       }
       if (buildStatus.hasReleases()) {
         attachments << buildStatusReleasesAttach(buildStatus.releases)
+      }
+      Map changesAttach = buildChangesAttach(':twisted_rightwards_arrows: *Changes*', colors.REPORT_CHANGES)
+      if (changesAttach['fields']) {
+        attachments << changesAttach
       }
     }
     return this
@@ -191,7 +196,7 @@ class SlackReport implements Report {
     ]
 
     // try to grab test information
-    TestResultAction testAction = build.rawBuild.getAction(TestResultAction.class)
+    TestResultAction testAction = build.rawBuild?.getAction(TestResultAction.class)
 
     if (testAction != null) {
       String testLabel = "${testAction.failCount ? testAction.failCount + ' failed' : 'all passed'}"
@@ -263,6 +268,54 @@ class SlackReport implements Report {
           value: sb.toString(),
           short: false
       ]
+    }
+
+    return attachment
+  }
+
+  private Map buildChangesAttach(String title, String color) {
+    Map attachment = [
+        pretext  : title,
+        color    : color,
+        mrkdwn_in: ['pretext']
+    ]
+
+    // collect all commit IDs present in the current build's change sets
+    Set<String> changeSetCommitIds = dsl.currentBuild.changeSets
+      .collectMany { changeSet -> changeSet.items.collect { it.commitId } }
+      .toSet()
+
+    dsl.echo "Collected commit IDs from change sets: ${changeSetCommitIds}"
+
+    List fields = buildData.buildMap.collect { String jobGroup, List<JobItem> jobItems ->
+      StringBuilder sb = new StringBuilder()
+
+      List<Map<String,Object>> commitLogs
+      jobItems.each { JobItem jobItem ->
+        dsl.dir(jobItem.checkoutDir) {
+          commitLogs = ScmUtils.getCommitLog(dsl, jobItem)
+        }
+
+        commitLogs
+          .findAll { Map<String,Object> changelog ->
+            dsl.echo "Checking if commit ID '${changelog[ScmUtils.COMMIT_ID]}' is in the collected change set commit IDs..."
+            changeSetCommitIds.contains(changelog[ScmUtils.COMMIT_ID] as String) }
+          .each { Map<String,Object> changelog ->
+            // print commit log
+            String commitUrl = changelog[ScmUtils.COMMIT_URL] ?: jobItem.scmUrl
+            sb << "<${commitUrl}|${StringUtils.truncate(changelog[ScmUtils.COMMIT_TITLE] as String, 55)}>"
+            sb << '\n'
+          }
+      }
+
+      return [
+          value: sb.toString(),
+          short: false
+      ]
+    }.findAll { it.value?.trim() }
+
+    if (fields) {
+      attachment['fields'] = fields
     }
 
     return attachment
