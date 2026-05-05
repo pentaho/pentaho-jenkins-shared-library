@@ -6,7 +6,7 @@
 package org.hitachivantara.ci
 
 import hudson.EnvVars
-import hudson.model.AbstractBuild
+import hudson.model.Run
 import hudson.model.TaskListener
 import hudson.tasks.junit.TestResultAction
 import org.hitachivantara.ci.jenkins.JobUtils
@@ -56,7 +56,8 @@ class TestSlackReport extends BasePipelineSpecification {
         getAbsoluteUrl() >> 'jenkins.url'
         getCurrentResult() >> 'SUCCESS'
         getDuration() >> 10000l
-        getRawBuild() >> GroovyMock(AbstractBuild) {
+        getChangeSets() >> []
+        getRawBuild() >> GroovyMock(Run) {
           getCauses() >> [[shortDescription: 'Build started by user']]
         }
       })
@@ -100,7 +101,8 @@ class TestSlackReport extends BasePipelineSpecification {
     setup:
       mockScript.binding.setVariable('currentBuild', GroovyMock(RunWrapper) {
         getAbsoluteUrl() >> 'jenkins.url'
-        getRawBuild() >> GroovyMock(AbstractBuild) {
+        getChangeSets() >> []
+        getRawBuild() >> GroovyMock(Run) {
           getAction(TestResultAction.class) >> GroovyMock(TestResultAction) {
             getFailCount() >> failCount
             getTotalCount() >> totalCount
@@ -159,7 +161,8 @@ class TestSlackReport extends BasePipelineSpecification {
       }])
       mockScript.binding.setVariable('currentBuild', GroovyMock(RunWrapper){
         getAbsoluteUrl() >> 'jenkins.url'
-        getRawBuild() >> GroovyMock(AbstractBuild)
+        getChangeSets() >> []
+        getRawBuild() >> GroovyMock(Run)
       })
       SlackReport report = new SlackReport(mockScript)
 
@@ -238,7 +241,8 @@ class TestSlackReport extends BasePipelineSpecification {
         getAbsoluteUrl() >> 'jenkins.url'
         getCurrentResult() >> 'FAILURE'
         getDuration() >> 10000l
-        getRawBuild() >> GroovyMock(AbstractBuild) {
+        getChangeSets() >> []
+        getRawBuild() >> GroovyMock(Run) {
           getCauses() >> [[shortDescription: 'Build started by user']]
         }
       })
@@ -313,10 +317,13 @@ class TestSlackReport extends BasePipelineSpecification {
         getAbsoluteUrl() >> 'jenkins.url'
         getCurrentResult() >> 'SUCCESS'
         getDuration() >> 10000l
-        getRawBuild() >> GroovyMock(AbstractBuild) {
+        getChangeSets() >> []
+        getRawBuild() >> GroovyMock(Run) {
           getCauses() >> [[shortDescription: 'Build started by user']]
         }
       })
+
+      scmUtilsMetaClass.addReplacement(ScmUtils, ['static.getCommitLog': { Script s, JobItem j -> [] }])
 
       SlackReport report = new SlackReport(mockScript)
       configRule.buildData([
@@ -386,7 +393,7 @@ class TestSlackReport extends BasePipelineSpecification {
   def "test job data status info"() {
     setup:
     mockScript.binding.setVariable('currentBuild', GroovyMock(RunWrapper) {
-      getRawBuild() >> GroovyMock(AbstractBuild) {
+      getRawBuild() >> GroovyMock(Run) {
         getEnvironment(_) >> { TaskListener listener ->
           EnvVars envVars = new EnvVars(['JENKINS_URL': 'http://dummies.org'])
           return envVars
@@ -444,6 +451,87 @@ class TestSlackReport extends BasePipelineSpecification {
 
     expectedPretext = '<http://dummies.org|master branch health check>'
     expectedColor = '#838282'
+  }
+
+  def "test build changes attach includes only commits present in current build changeSets"() {
+    setup:
+      String commitInChangeset      = 'aaaa1111bbbb2222cccc3333dddd4444eeee5555'
+      String commitNotInChangeset   = 'ffff6666aaaa7777bbbb8888cccc9999dddd0000'
+      String commitAlsoInChangeset  = '1111aaaa2222bbbb3333cccc4444dddd5555eeee'
+
+      mockScript.binding.setVariable('currentBuild', GroovyMock(RunWrapper) {
+        getAbsoluteUrl() >> 'jenkins.url'
+        getCurrentResult() >> 'SUCCESS'
+        getDuration() >> 1000l
+        getChangeSets() >> [
+          [items: [
+            [commitId: commitInChangeset],
+            [commitId: commitAlsoInChangeset]
+          ]]
+        ]
+      })
+
+      scmUtilsMetaClass.addReplacement(ScmUtils, ['static.getCommitLog': { Script s, JobItem j ->
+        [
+          [(ScmUtils.COMMIT_ID): commitInChangeset,     (ScmUtils.COMMIT_TITLE): 'Fix bug',           (ScmUtils.COMMIT_URL): "http://github.com/org/repo/commit/${commitInChangeset}"],
+          [(ScmUtils.COMMIT_ID): commitNotInChangeset,  (ScmUtils.COMMIT_TITLE): 'Local only commit',  (ScmUtils.COMMIT_URL): "http://github.com/org/repo/commit/${commitNotInChangeset}"],
+          [(ScmUtils.COMMIT_ID): commitAlsoInChangeset, (ScmUtils.COMMIT_TITLE): 'Another fix',        (ScmUtils.COMMIT_URL): "http://github.com/org/repo/commit/${commitAlsoInChangeset}"],
+        ]
+      }])
+
+      SlackReport report = new SlackReport(mockScript)
+      configRule.buildData([
+        BUILD_DATA_FILE  : 'buildDataSample.yaml',
+        SLACK_INTEGRATION: true
+      ])
+
+    when:
+      report.build(configRule.buildData)
+
+    then:
+      noExceptionThrown()
+
+    and: "a changes attachment is present"
+      Map changesAttach = report.attachments.find { it.pretext == ':twisted_rightwards_arrows: *Changes*' }
+      changesAttach != null
+      changesAttach['fields'] != null
+
+    and: "only commits present in changeSets appear in the output"
+      String allValues = changesAttach['fields'].collect { it.value }.join('')
+      allValues.contains(commitInChangeset)
+      allValues.contains(commitAlsoInChangeset)
+      !allValues.contains(commitNotInChangeset)
+  }
+
+  def "test build changes attach is empty when no commits match changeSets"() {
+    setup:
+      mockScript.binding.setVariable('currentBuild', GroovyMock(RunWrapper) {
+        getAbsoluteUrl() >> 'jenkins.url'
+        getCurrentResult() >> 'SUCCESS'
+        getDuration() >> 1000l
+        getChangeSets() >> []
+      })
+
+      scmUtilsMetaClass.addReplacement(ScmUtils, ['static.getCommitLog': { Script s, JobItem j ->
+        [
+          [(ScmUtils.COMMIT_ID): 'localcommit1234', (ScmUtils.COMMIT_TITLE): 'Some local commit', (ScmUtils.COMMIT_URL): 'http://github.com/org/repo/commit/localcommit1234'],
+        ]
+      }])
+
+      SlackReport report = new SlackReport(mockScript)
+      configRule.buildData([
+        BUILD_DATA_FILE  : 'buildDataSample.yaml',
+        SLACK_INTEGRATION: true
+      ])
+
+    when:
+      report.build(configRule.buildData)
+
+    then:
+      noExceptionThrown()
+
+    and: "no changes attachment is added when there are no matching commits"
+      !report.attachments.any { it.pretext == ':twisted_rightwards_arrows: *Changes*' }
   }
 
   def "test send echoes timestamp when slack responds"() {
