@@ -11,6 +11,7 @@ import hudson.tasks.junit.TestResultAction
 import org.hitachivantara.ci.JobItem
 import org.hitachivantara.ci.ScmUtils
 import org.hitachivantara.ci.StringUtils
+import org.hitachivantara.ci.build.BuildFramework
 import org.hitachivantara.ci.config.BuildData
 import org.hitachivantara.ci.jenkins.JobUtils
 import org.hitachivantara.ci.jenkins.MinionHandler
@@ -292,8 +293,19 @@ class SlackReport implements Report {
 
       List<Map<String,Object>> commitLogs
       jobItems.each { JobItem jobItem ->
-        dsl.dir(jobItem.checkoutDir) {
-          commitLogs = ScmUtils.getCommitLog(dsl, jobItem)
+
+        if (jobItem.buildFramework in [BuildFramework.JENKINS_JOB, BuildFramework.DSL_SCRIPT]) {
+          dsl.echo "Skipping commit log retrieval for job '${jobItem.jobID}' with build framework '${jobItem.buildFramework}'"
+          return
+        }
+
+        try {
+          dsl.dir(jobItem.checkoutDir) {
+            commitLogs = ScmUtils.getCommitLog(dsl, jobItem)
+          }
+        } catch (Exception e) {
+          dsl.echo "Warning: could not retrieve commit log for '${jobItem.jobID}': ${e.message}"
+          commitLogs = []
         }
 
         commitLogs
