@@ -534,6 +534,93 @@ class TestSlackReport extends BasePipelineSpecification {
       !report.attachments.any { it.pretext == ':twisted_rightwards_arrows: *Changes*' }
   }
 
+  def "test build changes attach skips JENKINS_JOB and DSL_SCRIPT framework items"() {
+    setup:
+      boolean commitLogCalled = false
+      scmUtilsMetaClass.addReplacement(ScmUtils, ['static.getCommitLog': { Script s, JobItem j ->
+        commitLogCalled = true
+        [[(ScmUtils.COMMIT_ID): 'abc123', (ScmUtils.COMMIT_TITLE): 'Should not appear', (ScmUtils.COMMIT_URL): 'http://example.com']]
+      }])
+
+      String commitId = 'abc1234567890abc1234567890abc1234567890ab'
+      mockScript.binding.setVariable('currentBuild', GroovyMock(RunWrapper) {
+        getAbsoluteUrl() >> 'jenkins.url'
+        getCurrentResult() >> 'SUCCESS'
+        getDuration() >> 1000l
+        getChangeSets() >> [
+          [items: [[commitId: commitId]]]
+        ]
+        // rawBuild not stubbed -> null; null-safe ?. in buildMainAttach handles this
+      })
+
+      SlackReport report = new SlackReport(mockScript)
+      configRule.buildData([
+        SLACK_INTEGRATION: true,
+        BUILD_DATA_YAML  : '''\
+          jobGroups:
+            10:
+              - jobID: jenkins-job-item
+                scmUrl: https://github.com/org/jenkins-repo.git
+                buildFramework: JENKINS_JOB
+            20:
+              - jobID: dsl-script-item
+                scmUrl: https://github.com/org/dsl-repo.git
+                buildFramework: DSL_SCRIPT
+        '''.stripIndent()
+      ])
+
+    when:
+      report.build(configRule.buildData)
+
+    then:
+      noExceptionThrown()
+
+    and: "ScmUtils.getCommitLog was never called for skipped frameworks"
+      !commitLogCalled
+
+    and: "no changes attachment is added because all items were skipped"
+      !report.attachments.any { it.pretext == ':twisted_rightwards_arrows: *Changes*' }
+  }
+
+  def "test build changes attach handles ScmUtils exception gracefully"() {
+    setup:
+      List<String> echoMessages = []
+      registerAllowedMethod('echo', [String.class], { String msg -> echoMessages << msg })
+
+      scmUtilsMetaClass.addReplacement(ScmUtils, ['static.getCommitLog': { Script s, JobItem j ->
+        throw new RuntimeException("Git command failed: permission denied")
+      }])
+
+      String commitId = 'abc1234567890abc1234567890abc1234567890ab'
+      mockScript.binding.setVariable('currentBuild', GroovyMock(RunWrapper) {
+        getAbsoluteUrl() >> 'jenkins.url'
+        getCurrentResult() >> 'SUCCESS'
+        getDuration() >> 1000l
+        getChangeSets() >> [
+          [items: [[commitId: commitId]]]
+        ]
+        // rawBuild not stubbed -> null; null-safe ?. in buildMainAttach handles this
+      })
+
+      SlackReport report = new SlackReport(mockScript)
+      configRule.buildData([
+        BUILD_DATA_FILE  : 'buildDataSample.yaml',
+        SLACK_INTEGRATION: true
+      ])
+
+    when:
+      report.build(configRule.buildData)
+
+    then:
+      noExceptionThrown()
+
+    and: "a warning message was echoed mentioning the failed commit log retrieval"
+      echoMessages.any { it.contains('Warning: could not retrieve commit log') }
+
+    and: "no changes attachment is added since all commit log retrievals failed"
+      !report.attachments.any { it.pretext == ':twisted_rightwards_arrows: *Changes*' }
+  }
+
   def "test send echoes timestamp when slack responds"() {
     setup:
       List<String> echoMessages = []
