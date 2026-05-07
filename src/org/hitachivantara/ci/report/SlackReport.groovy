@@ -288,10 +288,11 @@ class SlackReport implements Report {
 
     dsl.echo "Collected commit IDs from change sets: ${changeSetCommitIds}"
 
+    Set<String> seenCommitIds = []
+
     List fields = buildData.buildMap.collect { String jobGroup, List<JobItem> jobItems ->
       StringBuilder sb = new StringBuilder()
 
-      List<Map<String,Object>> commitLogs
       jobItems.each { JobItem jobItem ->
 
         if (jobItem.buildFramework in [BuildFramework.JENKINS_JOB, BuildFramework.DSL_SCRIPT]) {
@@ -299,19 +300,21 @@ class SlackReport implements Report {
           return
         }
 
+        List<Map<String,Object>> commitLogs = []
         try {
           dsl.dir(jobItem.checkoutDir) {
             commitLogs = ScmUtils.getCommitLog(dsl, jobItem)
           }
         } catch (Exception e) {
           dsl.echo "Warning: could not retrieve commit log for '${jobItem.jobID}': ${e.message}"
-          commitLogs = []
         }
 
         commitLogs
           .findAll { Map<String,Object> changelog ->
-            dsl.echo "Checking if commit ID '${changelog[ScmUtils.COMMIT_ID]}' is in the collected change set commit IDs..."
-            changeSetCommitIds.contains(changelog[ScmUtils.COMMIT_ID] as String) }
+            String commitId = changelog[ScmUtils.COMMIT_ID] as String
+            dsl.echo "Checking if commit ID '${commitId}' is in the collected change set commit IDs..."
+            changeSetCommitIds.contains(commitId) && seenCommitIds.add(commitId)
+          }
           .each { Map<String,Object> changelog ->
             // print commit log
             String commitUrl = changelog[ScmUtils.COMMIT_URL] ?: jobItem.scmUrl

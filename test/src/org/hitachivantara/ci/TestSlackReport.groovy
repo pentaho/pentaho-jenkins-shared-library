@@ -503,6 +503,64 @@ class TestSlackReport extends BasePipelineSpecification {
       !allValues.contains(commitNotInChangeset)
   }
 
+  def "test build changes attach deduplicates commits shared across multiple job items"() {
+    setup:
+      String sharedCommitId  = 'aaaa1111bbbb2222cccc3333dddd4444eeee5555'
+      String uniqueCommitId  = 'ffff6666aaaa7777bbbb8888cccc9999dddd0000'
+
+      mockScript.binding.setVariable('currentBuild', GroovyMock(RunWrapper) {
+        getAbsoluteUrl() >> 'jenkins.url'
+        getCurrentResult() >> 'SUCCESS'
+        getDuration() >> 1000l
+        getChangeSets() >> [
+          [items: [
+            [commitId: sharedCommitId],
+            [commitId: uniqueCommitId]
+          ]]
+        ]
+      })
+
+      // Both job items return the same sharedCommitId plus their own unique commit
+      int callCount = 0
+      scmUtilsMetaClass.addReplacement(ScmUtils, ['static.getCommitLog': { Script s, JobItem j ->
+        callCount++
+        if (callCount == 1) {
+          return [
+            [(ScmUtils.COMMIT_ID): sharedCommitId, (ScmUtils.COMMIT_TITLE): 'Shared commit', (ScmUtils.COMMIT_URL): "http://github.com/org/repo/commit/${sharedCommitId}"],
+            [(ScmUtils.COMMIT_ID): uniqueCommitId,  (ScmUtils.COMMIT_TITLE): 'Unique commit',  (ScmUtils.COMMIT_URL): "http://github.com/org/repo/commit/${uniqueCommitId}"],
+          ]
+        } else {
+          // Second job item also has the shared commit in its git log
+          return [
+            [(ScmUtils.COMMIT_ID): sharedCommitId, (ScmUtils.COMMIT_TITLE): 'Shared commit', (ScmUtils.COMMIT_URL): "http://github.com/org/repo/commit/${sharedCommitId}"],
+          ]
+        }
+      }])
+
+      SlackReport report = new SlackReport(mockScript)
+      configRule.buildData([
+        BUILD_DATA_FILE  : 'buildDataSample.yaml',
+        SLACK_INTEGRATION: true
+      ])
+
+    when:
+      report.build(configRule.buildData)
+
+    then:
+      noExceptionThrown()
+
+    and: "a changes attachment is present"
+      Map changesAttach = report.attachments.find { it.pretext == ':twisted_rightwards_arrows: *Changes*' }
+      changesAttach != null
+
+    and: "the shared commit appears exactly once across all fields"
+      String allValues = changesAttach['fields'].collect { it.value }.join('')
+      allValues.count(sharedCommitId) == 1
+
+    and: "the unique commit also appears"
+      allValues.contains(uniqueCommitId)
+  }
+
   def "test build changes attach is empty when no commits match changeSets"() {
     setup:
       mockScript.binding.setVariable('currentBuild', GroovyMock(RunWrapper) {
