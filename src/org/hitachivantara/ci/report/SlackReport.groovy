@@ -6,12 +6,12 @@
 package org.hitachivantara.ci.report
 
 import groovy.json.JsonOutput
+import groovy.json.JsonSlurper
 import hudson.model.TaskListener
 import hudson.tasks.junit.TestResultAction
 import org.hitachivantara.ci.JobItem
 import org.hitachivantara.ci.ScmUtils
 import org.hitachivantara.ci.StringUtils
-import org.hitachivantara.ci.build.BuildFramework
 import org.hitachivantara.ci.config.BuildData
 import org.hitachivantara.ci.jenkins.JobUtils
 import org.hitachivantara.ci.jenkins.MinionHandler
@@ -281,59 +281,70 @@ class SlackReport implements Report {
         mrkdwn_in: ['pretext']
     ]
 
-    // collect all commit IDs present in the current build's change sets
-    Set<String> changeSetCommitIds = dsl.currentBuild.changeSets
-      .collectMany { changeSet -> changeSet.items.collect { it.commitId } }
-      .toSet()
+    // collect all commit IDs and messages present in the current build's change sets
+    Map<String, String> changeSetCommits = dsl.currentBuild.changeSets
+      .collectMany { changeSet -> changeSet.items.collect { [commitId: it.commitId, message: it.msg] } }
+      .collectEntries { [it.commitId, it.message] }
 
-    dsl.echo "Collected commit IDs from change sets: ${changeSetCommitIds}"
+    dsl.echo "Collected commit IDs from change sets: ${changeSetCommits.keySet()}"
 
-    Set<String> seenCommitIds = []
+    StringBuilder sb = new StringBuilder()
 
-    List fields = buildData.buildMap.collect { String jobGroup, List<JobItem> jobItems ->
-      StringBuilder sb = new StringBuilder()
-
-      jobItems.each { JobItem jobItem ->
-
-        if (jobItem.buildFramework in [BuildFramework.JENKINS_JOB, BuildFramework.DSL_SCRIPT]) {
-          dsl.echo "Skipping commit log retrieval for job '${jobItem.jobID}' with build framework '${jobItem.buildFramework}'"
-          return
-        }
-
-        List<Map<String,Object>> commitLogs = []
-        try {
-          dsl.dir(jobItem.checkoutDir) {
-            commitLogs = ScmUtils.getCommitLog(dsl, jobItem)
-          }
-        } catch (Exception e) {
-          dsl.echo "Warning: could not retrieve commit log for '${jobItem.jobID}': ${e.message}"
-        }
-
-        commitLogs
-          .findAll { Map<String,Object> changelog ->
-            String commitId = changelog[ScmUtils.COMMIT_ID] as String
-            dsl.echo "Checking if commit ID '${commitId}' is in the collected change set commit IDs..."
-            changeSetCommitIds.contains(commitId) && seenCommitIds.add(commitId)
-          }
-          .each { Map<String,Object> changelog ->
-            // print commit log
-            String commitUrl = changelog[ScmUtils.COMMIT_URL] ?: jobItem.scmUrl
-            sb << "<${commitUrl}|${StringUtils.truncate(changelog[ScmUtils.COMMIT_TITLE] as String, 55)}>"
-            sb << '\n'
-          }
+    String githubToken = null
+    String credentialsId = buildData.getString('SCM_API_TOKEN_CREDENTIALS_ID')
+    if (credentialsId) {
+      dsl.withCredentials([dsl.string(credentialsId: credentialsId, variable: 'GITHUB_TOKEN')]) {
+        githubToken = dsl.env.GITHUB_TOKEN
       }
+    }
 
-      return [
-          value: sb.toString(),
-          short: false
-      ]
-    }.findAll { it.value?.trim() }
+    // Collect unique (owner, repo) pairs from all job items
+    List repos = buildData.buildMap.collectMany { String key, List items ->
+      items.collect { JobItem ji -> [owner: ji.scmInfo.organization, repo: ji.scmInfo.repository] }
+    }.unique()
 
-    if (fields) {
-      attachment['fields'] = fields
+    changeSetCommits.each { String commitId, String localMessage ->
+      Map commitData = fetchCommitFromGitHub(commitId, repos, githubToken)
+      if (commitData) {
+        String commitUrl = commitData.html_url
+        String commitMessage = (commitData.commit?.message as String)?.readLines()?.first() ?: ''
+        sb << "<${commitUrl}|${commitId.take(6)}> - ${StringUtils.truncate(commitMessage, 55)}"
+        sb << '\n'
+      } else {
+        dsl.echo "Warning: could not find commit '${commitId}' in any known repo"
+        String commitMessage = localMessage?.readLines()?.first() ?: ''
+        sb << "${commitId.take(6)} - ${StringUtils.truncate(commitMessage, 55)}"
+        sb << '\n'
+      }
+    }
+
+    String value = sb.toString()
+    if (value?.trim()) {
+      attachment['fields'] = [[value: value, short: false]]
     }
 
     return attachment
+  }
+
+  Map fetchCommitFromGitHub(String commitId, List repos, String githubToken = null) {
+    for (def repoInfo : repos) {
+      try {
+        String apiUrl = "https://api.github.com/repos/${repoInfo.owner}/${repoInfo.repo}/commits/${commitId}"
+        HttpURLConnection connection = new URL(apiUrl).openConnection() as HttpURLConnection
+        connection.setRequestProperty('Accept', 'application/vnd.github+json')
+        connection.setRequestProperty('User-Agent', 'Jenkins-CI')
+        if (githubToken) {
+          connection.setRequestProperty('Authorization', "Bearer ${githubToken}")
+        }
+        int responseCode = connection.responseCode
+        if (responseCode == 200) {
+          return new JsonSlurper().parse(connection.inputStream) as Map
+        }
+      } catch (Exception e) {
+        dsl.echo "Warning: could not fetch commit '${commitId}' from GitHub repo '${repoInfo.owner}/${repoInfo.repo}': ${e.message}"
+      }
+    }
+    return null
   }
 
   /**

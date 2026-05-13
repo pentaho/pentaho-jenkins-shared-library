@@ -28,12 +28,39 @@ class TestSlackReport extends BasePipelineSpecification {
   ConfigurationRule configRule = new ConfigurationRule(this)
   ReplacePropertyRule scmUtilsMetaClass = new ReplacePropertyRule()
   ReplacePropertyRule jobUtilsMetaClass = new ReplacePropertyRule()
+  ReplacePropertyRule slackReportMetaClass = new ReplacePropertyRule()
+  ReplacePropertyRule urlMetaClass = new ReplacePropertyRule()
 
   @Rule
   RuleChain rules = Rules.getCommonRules(this)
     .around(configRule)
     .around(scmUtilsMetaClass)
     .around(jobUtilsMetaClass)
+    .around(slackReportMetaClass)
+    .around(urlMetaClass)
+
+  /**
+   * Minimal concrete HttpURLConnection for tests that need to exercise
+   * fetchCommitFromGitHub's real HTTP logic without making network calls.
+   */
+  static class MockHttpURLConnection extends HttpURLConnection {
+    int status
+    byte[] body
+    Map<String, String> capturedHeaders = [:]
+
+    MockHttpURLConnection(int status = 200, byte[] body = '{}'.bytes) {
+      super(null)
+      this.status = status
+      this.body = body
+    }
+
+    @Override void connect() throws IOException {}
+    @Override void disconnect() {}
+    @Override boolean usingProxy() { false }
+    @Override int getResponseCode() { status }
+    @Override InputStream getInputStream() throws IOException { new ByteArrayInputStream(body) }
+    @Override void setRequestProperty(String key, String value) { capturedHeaders[key] = value }
+  }
 
   def "test no report is generated if slack integration is not enabled"() {
     setup:
@@ -453,11 +480,10 @@ class TestSlackReport extends BasePipelineSpecification {
     expectedColor = '#838282'
   }
 
-  def "test build changes attach includes only commits present in current build changeSets"() {
+  def "test build changes attach formats commit links from changeSets via GitHub API"() {
     setup:
-      String commitInChangeset      = 'aaaa1111bbbb2222cccc3333dddd4444eeee5555'
-      String commitNotInChangeset   = 'ffff6666aaaa7777bbbb8888cccc9999dddd0000'
-      String commitAlsoInChangeset  = '1111aaaa2222bbbb3333cccc4444dddd5555eeee'
+      String commitId1 = 'aaaa1111bbbb2222cccc3333dddd4444eeee5555'
+      String commitId2 = '1111aaaa2222bbbb3333cccc4444dddd5555eeee'
 
       mockScript.binding.setVariable('currentBuild', GroovyMock(RunWrapper) {
         getAbsoluteUrl() >> 'jenkins.url'
@@ -465,25 +491,18 @@ class TestSlackReport extends BasePipelineSpecification {
         getDuration() >> 1000l
         getChangeSets() >> [
           [items: [
-            [commitId: commitInChangeset],
-            [commitId: commitAlsoInChangeset]
+            [commitId: commitId1],
+            [commitId: commitId2]
           ]]
         ]
       })
 
-      scmUtilsMetaClass.addReplacement(ScmUtils, ['static.getCommitLog': { Script s, JobItem j ->
-        [
-          [(ScmUtils.COMMIT_ID): commitInChangeset,     (ScmUtils.COMMIT_TITLE): 'Fix bug',           (ScmUtils.COMMIT_URL): "http://github.com/org/repo/commit/${commitInChangeset}"],
-          [(ScmUtils.COMMIT_ID): commitNotInChangeset,  (ScmUtils.COMMIT_TITLE): 'Local only commit',  (ScmUtils.COMMIT_URL): "http://github.com/org/repo/commit/${commitNotInChangeset}"],
-          [(ScmUtils.COMMIT_ID): commitAlsoInChangeset, (ScmUtils.COMMIT_TITLE): 'Another fix',        (ScmUtils.COMMIT_URL): "http://github.com/org/repo/commit/${commitAlsoInChangeset}"],
-        ]
+      slackReportMetaClass.addReplacement(SlackReport, ['fetchCommitFromGitHub': { String commitId, List repos, String token ->
+        [html_url: "http://github.com/org/repo/commit/${commitId}", commit: [message: "Fix for ${commitId}"]]
       }])
 
       SlackReport report = new SlackReport(mockScript)
-      configRule.buildData([
-        BUILD_DATA_FILE  : 'buildDataSample.yaml',
-        SLACK_INTEGRATION: true
-      ])
+      configRule.addProperties([SLACK_INTEGRATION: true])
 
     when:
       report.build(configRule.buildData)
@@ -496,52 +515,36 @@ class TestSlackReport extends BasePipelineSpecification {
       changesAttach != null
       changesAttach['fields'] != null
 
-    and: "only commits present in changeSets appear in the output"
+    and: "both changeSet commits appear formatted with short hash and message"
       String allValues = changesAttach['fields'].collect { it.value }.join('')
-      allValues.contains(commitInChangeset)
-      allValues.contains(commitAlsoInChangeset)
-      !allValues.contains(commitNotInChangeset)
+      allValues.contains(commitId1.take(6))
+      allValues.contains(commitId2.take(6))
+      allValues.contains("Fix for ${commitId1}")
+      allValues.contains("Fix for ${commitId2}")
   }
 
-  def "test build changes attach deduplicates commits shared across multiple job items"() {
+  def "test build changes attach deduplicates commits appearing in multiple changeSets"() {
     setup:
-      String sharedCommitId  = 'aaaa1111bbbb2222cccc3333dddd4444eeee5555'
-      String uniqueCommitId  = 'ffff6666aaaa7777bbbb8888cccc9999dddd0000'
+      String sharedCommitId = 'aaaa1111bbbb2222cccc3333dddd4444eeee5555'
 
       mockScript.binding.setVariable('currentBuild', GroovyMock(RunWrapper) {
         getAbsoluteUrl() >> 'jenkins.url'
         getCurrentResult() >> 'SUCCESS'
         getDuration() >> 1000l
         getChangeSets() >> [
-          [items: [
-            [commitId: sharedCommitId],
-            [commitId: uniqueCommitId]
-          ]]
+          [items: [[commitId: sharedCommitId]]],
+          [items: [[commitId: sharedCommitId]]]   // same commit in two separate changeSets
         ]
       })
 
-      // Both job items return the same sharedCommitId plus their own unique commit
-      int callCount = 0
-      scmUtilsMetaClass.addReplacement(ScmUtils, ['static.getCommitLog': { Script s, JobItem j ->
-        callCount++
-        if (callCount == 1) {
-          return [
-            [(ScmUtils.COMMIT_ID): sharedCommitId, (ScmUtils.COMMIT_TITLE): 'Shared commit', (ScmUtils.COMMIT_URL): "http://github.com/org/repo/commit/${sharedCommitId}"],
-            [(ScmUtils.COMMIT_ID): uniqueCommitId,  (ScmUtils.COMMIT_TITLE): 'Unique commit',  (ScmUtils.COMMIT_URL): "http://github.com/org/repo/commit/${uniqueCommitId}"],
-          ]
-        } else {
-          // Second job item also has the shared commit in its git log
-          return [
-            [(ScmUtils.COMMIT_ID): sharedCommitId, (ScmUtils.COMMIT_TITLE): 'Shared commit', (ScmUtils.COMMIT_URL): "http://github.com/org/repo/commit/${sharedCommitId}"],
-          ]
-        }
+      int fetchCallCount = 0
+      slackReportMetaClass.addReplacement(SlackReport, ['fetchCommitFromGitHub': { String commitId, List repos, String token ->
+        fetchCallCount++
+        [html_url: "http://github.com/org/repo/commit/${commitId}", commit: [message: 'Shared commit']]
       }])
 
       SlackReport report = new SlackReport(mockScript)
-      configRule.buildData([
-        BUILD_DATA_FILE  : 'buildDataSample.yaml',
-        SLACK_INTEGRATION: true
-      ])
+      configRule.addProperties([SLACK_INTEGRATION: true])
 
     when:
       report.build(configRule.buildData)
@@ -549,16 +552,15 @@ class TestSlackReport extends BasePipelineSpecification {
     then:
       noExceptionThrown()
 
-    and: "a changes attachment is present"
+    and: "the GitHub API was queried only once despite the same commit appearing in two changeSets"
+      fetchCallCount == 1
+
+    and: "the changes attachment is present and the commit appears exactly once"
       Map changesAttach = report.attachments.find { it.pretext == ':twisted_rightwards_arrows: *Changes*' }
       changesAttach != null
-
-    and: "the shared commit appears exactly once across all fields"
       String allValues = changesAttach['fields'].collect { it.value }.join('')
-      allValues.count(sharedCommitId) == 1
-
-    and: "the unique commit also appears"
-      allValues.contains(uniqueCommitId)
+      // The display text "|commitId.take(6)>" appears only once (the URL part contains the full hash)
+      allValues.count("|${sharedCommitId.take(6)}>") == 1
   }
 
   def "test build changes attach is empty when no commits match changeSets"() {
@@ -570,17 +572,8 @@ class TestSlackReport extends BasePipelineSpecification {
         getChangeSets() >> []
       })
 
-      scmUtilsMetaClass.addReplacement(ScmUtils, ['static.getCommitLog': { Script s, JobItem j ->
-        [
-          [(ScmUtils.COMMIT_ID): 'localcommit1234', (ScmUtils.COMMIT_TITLE): 'Some local commit', (ScmUtils.COMMIT_URL): 'http://github.com/org/repo/commit/localcommit1234'],
-        ]
-      }])
-
       SlackReport report = new SlackReport(mockScript)
-      configRule.buildData([
-        BUILD_DATA_FILE  : 'buildDataSample.yaml',
-        SLACK_INTEGRATION: true
-      ])
+      configRule.addProperties([SLACK_INTEGRATION: true])
 
     when:
       report.build(configRule.buildData)
@@ -588,12 +581,13 @@ class TestSlackReport extends BasePipelineSpecification {
     then:
       noExceptionThrown()
 
-    and: "no changes attachment is added when there are no matching commits"
+    and: "no changes attachment is added when there are no commits in the changeSets"
       !report.attachments.any { it.pretext == ':twisted_rightwards_arrows: *Changes*' }
   }
 
-  def "test build changes attach skips JENKINS_JOB and DSL_SCRIPT framework items"() {
+  def "test build changes attach never calls ScmUtils getCommitLog"() {
     setup:
+      // Verify that buildChangesAttach no longer depends on ScmUtils at all
       boolean commitLogCalled = false
       scmUtilsMetaClass.addReplacement(ScmUtils, ['static.getCommitLog': { Script s, JobItem j ->
         commitLogCalled = true
@@ -608,24 +602,12 @@ class TestSlackReport extends BasePipelineSpecification {
         getChangeSets() >> [
           [items: [[commitId: commitId]]]
         ]
-        // rawBuild not stubbed -> null; null-safe ?. in buildMainAttach handles this
       })
 
+      slackReportMetaClass.addReplacement(SlackReport, ['fetchCommitFromGitHub': { String id, List repos, String token -> null }])
+
       SlackReport report = new SlackReport(mockScript)
-      configRule.buildData([
-        SLACK_INTEGRATION: true,
-        BUILD_DATA_YAML  : '''\
-          jobGroups:
-            10:
-              - jobID: jenkins-job-item
-                scmUrl: https://github.com/org/jenkins-repo.git
-                buildFramework: JENKINS_JOB
-            20:
-              - jobID: dsl-script-item
-                scmUrl: https://github.com/org/dsl-repo.git
-                buildFramework: DSL_SCRIPT
-        '''.stripIndent()
-      ])
+      configRule.addProperties([SLACK_INTEGRATION: true])
 
     when:
       report.build(configRule.buildData)
@@ -633,21 +615,21 @@ class TestSlackReport extends BasePipelineSpecification {
     then:
       noExceptionThrown()
 
-    and: "ScmUtils.getCommitLog was never called for skipped frameworks"
+    and: "ScmUtils.getCommitLog is never called by buildChangesAttach"
       !commitLogCalled
 
-    and: "no changes attachment is added because all items were skipped"
-      !report.attachments.any { it.pretext == ':twisted_rightwards_arrows: *Changes*' }
+    and: "changes attachment is still present with fallback plain-text commit (no link)"
+      Map changesAttach = report.attachments.find { it.pretext == ':twisted_rightwards_arrows: *Changes*' }
+      changesAttach != null
+      String allValues = changesAttach['fields'].collect { it.value }.join('')
+      allValues.contains(commitId.take(6))
+      !allValues.contains('http')  // no hyperlink since GitHub lookup failed
   }
 
-  def "test build changes attach handles ScmUtils exception gracefully"() {
+  def "test build changes attach warns and skips commits not found in GitHub"() {
     setup:
       List<String> echoMessages = []
       registerAllowedMethod('echo', [String.class], { String msg -> echoMessages << msg })
-
-      scmUtilsMetaClass.addReplacement(ScmUtils, ['static.getCommitLog': { Script s, JobItem j ->
-        throw new RuntimeException("Git command failed: permission denied")
-      }])
 
       String commitId = 'abc1234567890abc1234567890abc1234567890ab'
       mockScript.binding.setVariable('currentBuild', GroovyMock(RunWrapper) {
@@ -657,13 +639,67 @@ class TestSlackReport extends BasePipelineSpecification {
         getChangeSets() >> [
           [items: [[commitId: commitId]]]
         ]
-        // rawBuild not stubbed -> null; null-safe ?. in buildMainAttach handles this
+      })
+
+      // Simulate GitHub API returning no results for the commit
+      slackReportMetaClass.addReplacement(SlackReport, ['fetchCommitFromGitHub': { String id, List repos, String token -> null }])
+
+      SlackReport report = new SlackReport(mockScript)
+      configRule.addProperties([SLACK_INTEGRATION: true])
+
+    when:
+      report.build(configRule.buildData)
+
+    then:
+      noExceptionThrown()
+
+    and: "a warning is echoed for the unresolved commit"
+      echoMessages.any { it.contains("Warning: could not find commit '${commitId}'") }
+
+    and: "changes attachment is present with fallback plain-text commit (no link)"
+      Map changesAttach = report.attachments.find { it.pretext == ':twisted_rightwards_arrows: *Changes*' }
+      changesAttach != null
+      String allValues = changesAttach['fields'].collect { it.value }.join('')
+      allValues.contains(commitId.take(6))
+      !allValues.contains('<http')  // no hyperlink since GitHub lookup failed
+  }
+
+  def "test build changes attach passes GitHub token to API when SCM_API_TOKEN_CREDENTIALS_ID is configured"() {
+    setup:
+      String capturedToken = null
+      slackReportMetaClass.addReplacement(SlackReport, ['fetchCommitFromGitHub': { String commitId, List repos, String token ->
+        capturedToken = token
+        [html_url: "http://github.com/org/repo/commit/${commitId}", commit: [message: 'Fix']]
+      }])
+
+      registerAllowedMethod('string', [Map], { it })
+      registerAllowedMethod('withCredentials', [List, Closure], { List creds, Closure cl ->
+        // Save and restore env to avoid polluting subsequent tests (mockScript is static)
+        def savedEnv = mockScript.binding.variables.containsKey('env') ? mockScript.binding.variables.env : null
+        mockScript.binding.setVariable('env', [GITHUB_TOKEN: 'my-github-token'])
+        try {
+          cl.call()
+        } finally {
+          if (savedEnv != null) {
+            mockScript.binding.setVariable('env', savedEnv)
+          } else {
+            mockScript.binding.variables.remove('env')
+          }
+        }
+      })
+
+      String commitId = 'abc1234567890abc1234567890abc1234567890ab'
+      mockScript.binding.setVariable('currentBuild', GroovyMock(RunWrapper) {
+        getAbsoluteUrl() >> 'jenkins.url'
+        getCurrentResult() >> 'SUCCESS'
+        getDuration() >> 1000l
+        getChangeSets() >> [[items: [[commitId: commitId]]]]
       })
 
       SlackReport report = new SlackReport(mockScript)
-      configRule.buildData([
-        BUILD_DATA_FILE  : 'buildDataSample.yaml',
-        SLACK_INTEGRATION: true
+      configRule.addProperties([
+        SLACK_INTEGRATION             : true,
+        SCM_API_TOKEN_CREDENTIALS_ID  : 'my-credentials-id'
       ])
 
     when:
@@ -672,11 +708,93 @@ class TestSlackReport extends BasePipelineSpecification {
     then:
       noExceptionThrown()
 
-    and: "a warning message was echoed mentioning the failed commit log retrieval"
-      echoMessages.any { it.contains('Warning: could not retrieve commit log') }
+    and: "the token from credentials is passed to fetchCommitFromGitHub"
+      capturedToken == 'my-github-token'
 
-    and: "no changes attachment is added since all commit log retrievals failed"
-      !report.attachments.any { it.pretext == ':twisted_rightwards_arrows: *Changes*' }
+    and: "the changes attachment is present"
+      report.attachments.any { it.pretext == ':twisted_rightwards_arrows: *Changes*' }
+  }
+
+  def "test build changes attach extracts repos from build map job items"() {
+    setup:
+      String commitId = 'abc1234567890abc1234567890abc1234567890ab'
+
+      mockScript.binding.setVariable('currentBuild', GroovyMock(RunWrapper) {
+        getAbsoluteUrl() >> 'jenkins.url'
+        getCurrentResult() >> 'SUCCESS'
+        getDuration() >> 1000l
+        getChangeSets() >> [[items: [[commitId: commitId, msg: 'Some commit message']]]]
+      })
+
+      List capturedRepos = null
+      slackReportMetaClass.addReplacement(SlackReport, ['fetchCommitFromGitHub': { String id, List repos, String token ->
+        capturedRepos = repos
+        [html_url: "http://github.com/myorg/myrepo/commit/${id}", commit: [message: 'Some commit message']]
+      }])
+
+      SlackReport report = new SlackReport(mockScript)
+      configRule.addProperties([SLACK_INTEGRATION: true])
+
+      // Inject job items with known org/repo directly into the build map
+      configRule.buildData.buildMap = [
+        'group1': [
+          new JobItem(jobID: 'job1', scmUrl: 'https://github.com/myorg/myrepo.git', scmBranch: 'main'),
+          new JobItem(jobID: 'job2', scmUrl: 'https://github.com/myorg/other-repo.git', scmBranch: 'main')
+        ]
+      ]
+
+    when:
+      report.build(configRule.buildData)
+
+    then:
+      noExceptionThrown()
+
+    and: "fetchCommitFromGitHub received the repos extracted from the build map"
+      capturedRepos != null
+      capturedRepos.any { it.owner == 'myorg' && it.repo == 'myrepo' }
+      capturedRepos.any { it.owner == 'myorg' && it.repo == 'other-repo' }
+
+    and: "the changes attachment is present with the commit link"
+      report.attachments.any { it.pretext == ':twisted_rightwards_arrows: *Changes*' }
+  }
+
+  def "test build changes attach deduplicates repos from build map job items"() {
+    setup:
+      String commitId = 'abc1234567890abc1234567890abc1234567890ab'
+
+      mockScript.binding.setVariable('currentBuild', GroovyMock(RunWrapper) {
+        getAbsoluteUrl() >> 'jenkins.url'
+        getCurrentResult() >> 'SUCCESS'
+        getDuration() >> 1000l
+        getChangeSets() >> [[items: [[commitId: commitId, msg: 'Some commit']]]]
+      })
+
+      List capturedRepos = null
+      slackReportMetaClass.addReplacement(SlackReport, ['fetchCommitFromGitHub': { String id, List repos, String token ->
+        capturedRepos = repos
+        [html_url: "http://github.com/myorg/myrepo/commit/${id}", commit: [message: 'Some commit']]
+      }])
+
+      SlackReport report = new SlackReport(mockScript)
+      configRule.addProperties([SLACK_INTEGRATION: true])
+
+      // Two job items pointing to the same repo — should be deduplicated
+      configRule.buildData.buildMap = [
+        'group1': [
+          new JobItem(jobID: 'job1', scmUrl: 'https://github.com/myorg/myrepo.git', scmBranch: 'main'),
+          new JobItem(jobID: 'job2', scmUrl: 'https://github.com/myorg/myrepo.git', scmBranch: 'release')
+        ]
+      ]
+
+    when:
+      report.build(configRule.buildData)
+
+    then:
+      noExceptionThrown()
+
+    and: "duplicate repos are collapsed to a single entry"
+      capturedRepos != null
+      capturedRepos.count { it.owner == 'myorg' && it.repo == 'myrepo' } == 1
   }
 
   def "test send echoes timestamp when slack responds"() {
@@ -786,6 +904,323 @@ class TestSlackReport extends BasePipelineSpecification {
       result    | expectedChannel
       'SUCCESS' | '#success-channel'
       'FAILURE' | '#failure-channel'
+  }
+
+  // ─── fetchCommitFromGitHub unit tests ────────────────────────────────────────
+
+  def "test fetchCommitFromGitHub returns null immediately when repos list is empty"() {
+    setup:
+      SlackReport report = new SlackReport(mockScript)
+      report.buildData = configRule.buildData
+
+    when:
+      Map result = report.fetchCommitFromGitHub('abc123def456', [], null)
+
+    then:
+      result == null
+      noExceptionThrown()
+  }
+
+  def "test fetchCommitFromGitHub returns null and echoes warning when connection throws exception"() {
+    setup:
+      List<String> echoMessages = []
+      registerAllowedMethod('echo', [String.class], { String msg -> echoMessages << msg })
+
+      urlMetaClass.addReplacement(URL, ['openConnection': { -> throw new IOException('Connection refused') }])
+
+      SlackReport report = new SlackReport(mockScript)
+      report.buildData = configRule.buildData
+
+    when:
+      Map result = report.fetchCommitFromGitHub('abc1234567890abc', [[owner: 'myorg', repo: 'myrepo']], null)
+
+    then:
+      result == null
+      echoMessages.any { it.contains("Warning: could not fetch commit") }
+  }
+
+  def "test fetchCommitFromGitHub returns null when response code is not 200"() {
+    setup:
+      def mockConn = new MockHttpURLConnection(404)
+      urlMetaClass.addReplacement(URL, ['openConnection': { -> mockConn }])
+
+      SlackReport report = new SlackReport(mockScript)
+      report.buildData = configRule.buildData
+
+    when:
+      Map result = report.fetchCommitFromGitHub('abc1234567890abc', [[owner: 'myorg', repo: 'myrepo']], null)
+
+    then:
+      result == null
+      mockConn.capturedHeaders['Accept'] == 'application/vnd.github+json'
+      mockConn.capturedHeaders['User-Agent'] == 'Jenkins-CI'
+      !mockConn.capturedHeaders.containsKey('Authorization')
+  }
+
+  def "test fetchCommitFromGitHub returns parsed commit data on 200 response"() {
+    setup:
+      String responseJson = '{"html_url":"https://github.com/myorg/myrepo/commit/abc1234","commit":{"message":"Fix bug\\nSecond line"}}'
+      def mockConn = new MockHttpURLConnection(200, responseJson.bytes)
+      urlMetaClass.addReplacement(URL, ['openConnection': { -> mockConn }])
+
+      SlackReport report = new SlackReport(mockScript)
+      report.buildData = configRule.buildData
+
+    when:
+      Map result = report.fetchCommitFromGitHub('abc1234567890abc', [[owner: 'myorg', repo: 'myrepo']], null)
+
+    then:
+      result != null
+      result.html_url == 'https://github.com/myorg/myrepo/commit/abc1234'
+      (result.commit as Map).message == 'Fix bug\nSecond line'
+  }
+
+  def "test fetchCommitFromGitHub sets Authorization header when GitHub token is provided"() {
+    setup:
+      String responseJson = '{"html_url":"https://github.com/myorg/myrepo/commit/abc","commit":{"message":"msg"}}'
+      def mockConn = new MockHttpURLConnection(200, responseJson.bytes)
+      urlMetaClass.addReplacement(URL, ['openConnection': { -> mockConn }])
+
+      SlackReport report = new SlackReport(mockScript)
+      report.buildData = configRule.buildData
+
+    when:
+      report.fetchCommitFromGitHub('abc1234567890abc', [[owner: 'myorg', repo: 'myrepo']], 'my-secret-token')
+
+    then:
+      mockConn.capturedHeaders['Authorization'] == 'Bearer my-secret-token'
+  }
+
+  def "test fetchCommitFromGitHub tries next repo after non-200 and returns data from second"() {
+    setup:
+      String responseJson = '{"html_url":"https://github.com/org2/repo2/commit/abc","commit":{"message":"Fix"}}'
+      int callCount = 0
+      urlMetaClass.addReplacement(URL, ['openConnection': { ->
+        callCount++ == 0
+          ? new MockHttpURLConnection(404)
+          : new MockHttpURLConnection(200, responseJson.bytes)
+      }])
+
+      SlackReport report = new SlackReport(mockScript)
+      report.buildData = configRule.buildData
+
+    when:
+      Map result = report.fetchCommitFromGitHub('abc1234567890abc', [
+        [owner: 'org1', repo: 'repo1'],   // 404
+        [owner: 'org2', repo: 'repo2']    // 200
+      ], null)
+
+    then:
+      result != null
+      result.html_url == 'https://github.com/org2/repo2/commit/abc'
+      callCount == 2
+  }
+
+  // ─── send() default channel ───────────────────────────────────────────────────
+
+  def "test send uses empty channel string when SLACK_CHANNEL is not configured"() {
+    setup:
+      Map capturedArgs = [:]
+      registerAllowedMethod('slackSend', [Map.class], { Map args -> capturedArgs.putAll(args); return null })
+      registerAllowedMethod('echo', [String.class], { String msg -> })
+
+      SlackReport report = new SlackReport(mockScript)
+      // SLACK_CHANNEL defaults to null in default-properties.yaml -> hits the `default:` branch
+      configRule.addProperties([SLACK_INTEGRATION: true])
+      report.buildData = configRule.buildData
+
+    when:
+      report.send()
+
+    then:
+      noExceptionThrown()
+      capturedArgs.channel == ''
+  }
+
+  // ─── buildChangesAttach message truncation ────────────────────────────────────
+
+  def "test build changes attach uses only the first line of a multiline GitHub commit message"() {
+    setup:
+      String commitId = 'aabb1234567890aabb1234567890aabb1234567890'
+      mockScript.binding.setVariable('currentBuild', GroovyMock(RunWrapper) {
+        getAbsoluteUrl() >> 'jenkins.url'
+        getCurrentResult() >> 'SUCCESS'
+        getDuration() >> 1000l
+        getChangeSets() >> [[items: [[commitId: commitId]]]]
+      })
+
+      slackReportMetaClass.addReplacement(SlackReport, ['fetchCommitFromGitHub': { String id, List repos, String token ->
+        [html_url: "http://github.com/org/repo/commit/${id}",
+         commit  : [message: 'Subject line\nDetailed body line 1\nDetailed body line 2']]
+      }])
+
+      SlackReport report = new SlackReport(mockScript)
+      configRule.addProperties([SLACK_INTEGRATION: true])
+
+    when:
+      report.build(configRule.buildData)
+
+    then:
+      Map changesAttach = report.attachments.find { it.pretext == ':twisted_rightwards_arrows: *Changes*' }
+      changesAttach != null
+      String allValues = changesAttach['fields'].collect { it.value }.join('')
+      allValues.contains('Subject line')
+      !allValues.contains('Detailed body line 1')
+  }
+
+  def "test build changes attach uses only the first line of a multiline local fallback commit message"() {
+    setup:
+      String commitId = 'aabb1234567890aabb1234567890aabb1234567890'
+      mockScript.binding.setVariable('currentBuild', GroovyMock(RunWrapper) {
+        getAbsoluteUrl() >> 'jenkins.url'
+        getCurrentResult() >> 'SUCCESS'
+        getDuration() >> 1000l
+        getChangeSets() >> [[items: [[commitId: commitId, msg: 'Local subject\nLocal body line']]]]
+      })
+
+      slackReportMetaClass.addReplacement(SlackReport, ['fetchCommitFromGitHub': { String id, List repos, String token -> null }])
+
+      SlackReport report = new SlackReport(mockScript)
+      configRule.addProperties([SLACK_INTEGRATION: true])
+
+    when:
+      report.build(configRule.buildData)
+
+    then:
+      Map changesAttach = report.attachments.find { it.pretext == ':twisted_rightwards_arrows: *Changes*' }
+      changesAttach != null
+      String allValues = changesAttach['fields'].collect { it.value }.join('')
+      allValues.contains('Local subject')
+      !allValues.contains('Local body line')
+  }
+
+  def "test build changes attach handles null commit object in GitHub response safely"() {
+    setup:
+      String commitId = 'aabb1234567890aabb1234567890aabb1234567890'
+      mockScript.binding.setVariable('currentBuild', GroovyMock(RunWrapper) {
+        getAbsoluteUrl() >> 'jenkins.url'
+        getCurrentResult() >> 'SUCCESS'
+        getDuration() >> 1000l
+        getChangeSets() >> [[items: [[commitId: commitId]]]]
+      })
+
+      slackReportMetaClass.addReplacement(SlackReport, ['fetchCommitFromGitHub': { String id, List repos, String token ->
+        [html_url: "http://github.com/org/repo/commit/${id}", commit: null]   // null commit
+      }])
+
+      SlackReport report = new SlackReport(mockScript)
+      configRule.addProperties([SLACK_INTEGRATION: true])
+
+    when:
+      report.build(configRule.buildData)
+
+    then:
+      noExceptionThrown()
+      Map changesAttach = report.attachments.find { it.pretext == ':twisted_rightwards_arrows: *Changes*' }
+      changesAttach != null
+      changesAttach['fields'].collect { it.value }.join('').contains(commitId.take(6))
+  }
+
+  // ─── buildStatusAttach COMMIT_URL branch ─────────────────────────────────────
+
+  def "test status attach uses commit URL from changelog when non-null instead of scmUrl"() {
+    setup:
+      String customCommitUrl = 'https://custom-git.company.com/commit/abc1234567'
+      scmUtilsMetaClass.addReplacement(ScmUtils, ['static.getCommitLog': { Script s, JobItem j ->
+        [[
+          (ScmUtils.COMMIT_ID)    : 'abc' + '0' * 37,
+          (ScmUtils.COMMIT_TITLE) : 'Fix critical bug',
+          (ScmUtils.COMMIT_AUTHOR): 'dev',
+          (ScmUtils.COMMIT_URL)   : customCommitUrl   // non-null → should be used over scmUrl
+        ]]
+      }])
+
+      mockScript.binding.setVariable('currentBuild', GroovyMock(RunWrapper) {
+        getAbsoluteUrl() >> 'jenkins.url'
+        getChangeSets() >> []
+      })
+
+      SlackReport report = new SlackReport(mockScript)
+      configRule.addProperties([SLACK_INTEGRATION: true])
+      configRule.buildProperties[STAGE_NAME] = 'Build'
+      configRule.error(new JobItem(jobID: 'job1', scmUrl: 'https://github.com/org/repo.git', scmBranch: 'main'), null)
+
+    when:
+      report.build(configRule.buildData)
+
+    then:
+      Map errorsAttach = report.attachments.find { it.pretext == ':no_entry: *Errors*' }
+      errorsAttach != null
+      String allValues = errorsAttach['fields'].collect { it.value }.join('')
+      allValues.contains(customCommitUrl)               // custom URL is used
+      !allValues.contains('github.com/org/repo.git')    // scmUrl NOT used as hyperlink target
+  }
+
+  // ─── build() combined statuses ───────────────────────────────────────────────
+
+  def "test build includes both error and warning attachments when both are present"() {
+    setup:
+      mockScript.binding.setVariable('currentBuild', GroovyMock(RunWrapper) {
+        getAbsoluteUrl() >> 'jenkins.url'
+        getCurrentResult() >> 'FAILURE'
+        getDuration() >> 5000l
+        getChangeSets() >> []
+      })
+
+      SlackReport report = new SlackReport(mockScript)
+      configRule.addProperties([SLACK_INTEGRATION: true])
+      configRule.buildProperties[STAGE_NAME] = 'Deploy'
+      configRule.error('Deployment step failed')
+      configRule.warning('Deprecated API in use')
+
+    when:
+      report.build(configRule.buildData)
+
+    then:
+      noExceptionThrown()
+      report.attachments.size() == 3   // main + errors + warnings
+      report.attachments[1].pretext == ':no_entry: *Errors*'
+      report.attachments[1].color == 'danger'
+      report.attachments[2].pretext == ':warning: *Warnings*'
+      report.attachments[2].color == 'warning'
+  }
+
+  // ─── buildStatusReleasesAttach: item without link ────────────────────────────
+
+  def "test releases attach shows plain text label when release item has no link"() {
+    setup:
+      mockScript.binding.setVariable('currentBuild', GroovyMock(RunWrapper) {
+        getAbsoluteUrl() >> 'jenkins.url'
+        getCurrentResult() >> 'SUCCESS'
+        getDuration() >> 1000l
+        getChangeSets() >> []
+      })
+
+      SlackReport report = new SlackReport(mockScript)
+      configRule.addProperties([SLACK_INTEGRATION: true, TAG_NAME: 'v1.0'])
+
+      Map releases = [
+        (BuildStatus.Level.RELEASES): [
+          ('Release stage'): [
+            (BuildStatus.Category.GENERAL): [
+              [label: 'org/no-link-repo', link: null],       // no link → plain text
+              [label: 'org/linked-repo',  link: 'https://github.com/org/linked-repo/releases/v1.0']
+            ]
+          ]
+        ]
+      ]
+      configRule.buildStatus = new BuildStatus(buildStatus: releases)
+
+    when:
+      report.build(configRule.buildData)
+
+    then:
+      Map releasesAttach = report.attachments.find { it.pretext == ':label: *Releases*' }
+      releasesAttach != null
+      String allValues = releasesAttach['fields'].collect { it?.value }.join('')
+      allValues.contains('- org/no-link-repo\n')                        // plain text, no hyperlink
+      !allValues.contains('<org/no-link-repo|')                          // not in link format
+      allValues.contains('<https://github.com/org/linked-repo/releases/v1.0|org/linked-repo>')
   }
 
 }
