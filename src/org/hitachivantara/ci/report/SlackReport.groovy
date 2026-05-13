@@ -281,54 +281,43 @@ class SlackReport implements Report {
         mrkdwn_in: ['pretext']
     ]
 
-    // collect all commit IDs present in the current build's change sets
-    Set<String> changeSetCommitIds = dsl.currentBuild.changeSets
-      .collectMany { changeSet -> changeSet.items.collect { it.commitId } }
-      .toSet()
+    def url = "${dsl.env.BUILD_URL}wfapi/changesets"
+    def response = dsl.httpRequest(
+        url: url,
+        validResponseCodes: '200',
+        authentication: 'JENKINS_API_USER_TOKEN',
+    )
 
-    dsl.echo "Collected commit IDs from change sets: ${changeSetCommitIds}"
+    def json = dsl.readJSON text: response.content
+    def fields = []
 
-    Set<String> seenCommitIds = []
+    dsl.echo "Changesets response: ${json}"
 
-    List fields = buildData.buildMap.collect { String jobGroup, List<JobItem> jobItems ->
-      StringBuilder sb = new StringBuilder()
+    json.each { cs ->
+      cs.commits.each { c ->
 
-      jobItems.each { JobItem jobItem ->
+        def sha = (c.commitId ?: "")
+        def shortSha = sha.take(6)
 
-        if (jobItem.buildFramework in [BuildFramework.JENKINS_JOB, BuildFramework.DSL_SCRIPT]) {
-          dsl.echo "Skipping commit log retrieval for job '${jobItem.jobID}' with build framework '${jobItem.buildFramework}'"
-          return
-        }
+        def msg = (c.message ?: "")
+            .replaceAll(/\s+/, " ")
+            .take(55)
 
-        List<Map<String,Object>> commitLogs = []
-        try {
-          dsl.dir(jobItem.checkoutDir) {
-            commitLogs = ScmUtils.getCommitLog(dsl, jobItem)
-          }
-        } catch (Exception e) {
-          dsl.echo "Warning: could not retrieve commit log for '${jobItem.jobID}': ${e.message}"
-        }
+        def commitUrl = cs.commitUrl
 
-        commitLogs
-          .findAll { Map<String,Object> changelog ->
-            String commitId = changelog[ScmUtils.COMMIT_ID] as String
-            dsl.echo "Checking if commit ID '${commitId}' is in the collected change set commit IDs..."
-            changeSetCommitIds.contains(commitId) && seenCommitIds.add(commitId)
-          }
-          .each { Map<String,Object> changelog ->
-            // print commit log
-            String commitUrl = changelog[ScmUtils.COMMIT_URL] ?: jobItem.scmUrl
-            sb << "<${commitUrl}|${StringUtils.truncate(changelog[ScmUtils.COMMIT_TITLE] as String, 55)}>"
-            sb << '\n'
-          }
+        def shaPart = commitUrl
+            ? "<${commitUrl}|${shortSha}>"
+            : shortSha
+        dsl.echo "Parsed changeset item: sha='${sha}', shortSha='${shortSha}', msg='${msg}', commitUrl='${commitUrl}'"
+        fields <<
+            [
+                value: "- ${shaPart} - ${msg}\n",
+                short: false
+            ]
+
       }
-
-      return [
-          value: sb.toString(),
-          short: false
-      ]
-    }.findAll { it.value?.trim() }
-
+    }
+    dsl.echo "Parsed changesets: ${fields}"
     if (fields) {
       attachment['fields'] = fields
     }
