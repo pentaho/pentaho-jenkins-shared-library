@@ -101,6 +101,21 @@ class TestMavenChangeDetector extends BasePipelineSpecification {
       items.flatten().empty
   }
 
+  def "build is skipped for force items when BUILD_ONLY_ON_CHANGES is enabled and no changes detected"() {
+    setup:
+      configRule.addProperty(LibraryProperties.BUILD_ONLY_ON_CHANGES, 'true')
+      JobItem jobItem = new JobItem(['buildFramework': 'Maven', 'execType': 'force'])
+
+    when:
+      jobItem.changeLog = []
+
+    and:
+      List<List<?>> items = BuilderUtils.prepareForExecution([jobItem])
+
+    then:
+      items.flatten().empty
+  }
+
   @Unroll
   def "command build changes for #overrides"() {
     setup:

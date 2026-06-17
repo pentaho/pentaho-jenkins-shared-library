@@ -33,6 +33,7 @@ import static org.hitachivantara.ci.config.LibraryProperties.ARTIFACT_DEPLOYER_C
 import static org.hitachivantara.ci.config.LibraryProperties.FROGBOT_LOG_LEVEL
 import static org.hitachivantara.ci.config.LibraryProperties.SCM_API_TOKEN_CREDENTIALS_ID
 import static org.hitachivantara.ci.config.LibraryProperties.BRANCH_NAME
+import static org.hitachivantara.ci.config.LibraryProperties.BUILD_ONLY_ON_CHANGES
 import static org.hitachivantara.ci.config.LibraryProperties.CHANGE_ID
 import static org.hitachivantara.ci.config.LibraryProperties.CHANGE_TARGET
 import static org.hitachivantara.ci.config.LibraryProperties.JENKINS_JDK_FOR_BUILDS
@@ -371,7 +372,8 @@ class MavenBuilder extends AbstractBuilder implements IBuilder, Serializable {
    */
   @Override
   void applyScmChanges() {
-    if (item.execAuto) {
+    boolean changeDrivenBuild = item.execAuto || buildData.getBool(BUILD_ONLY_ON_CHANGES)
+    if (changeDrivenBuild) {
       item.skip = false
 
       if (!item.hasChangeLog()) {
@@ -393,6 +395,7 @@ class MavenBuilder extends AbstractBuilder implements IBuilder, Serializable {
       }
     }
   }
+
 
   CommandBuilder getCommandBuilder(String... args) {
     List<String> options = [defaultCommandOptions]

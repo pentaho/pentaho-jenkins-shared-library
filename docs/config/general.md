@@ -16,6 +16,12 @@ Maximum amount of time in minutes a build can take before it will be forcefully 
 
 **Default:** 360
 
+### BUILD_ONLY_ON_CHANGES
+If true, Maven job items are executed only when SCM changes are detected, even when their `execType` is `FORCE`.
+
+**Default:** false
+
+
 ### DEFAULT_BUILD_PROPERTIES
 Default path to look for an external configuration that overrides the default one. 
 

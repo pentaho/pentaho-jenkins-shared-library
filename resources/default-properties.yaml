@@ -101,6 +101,8 @@ TAG_SKIP_SNAPSHOT: true
 
 # Change detection
 CHANGES_FROM_LAST: FAILURE
+BUILD_ONLY_ON_CHANGES: false
+
 
 # Defaults for Job properties
 JOB_ITEM_DEFAULTS:

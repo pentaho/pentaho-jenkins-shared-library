@@ -215,6 +215,7 @@ class LibraryProperties implements Serializable {
   public static final String DEPENDENCY_CHECK_SUPPRESSION_PATH = 'DEPENDENCY_CHECK_SUPPRESSION_PATH'
   public static final String DEPENDENCY_CHECK_REPORT_PATTERN = 'DEPENDENCY_CHECK_REPORT_PATTERN'
   public static final String CHANGES_FROM_LAST = 'CHANGES_FROM_LAST'
+  public static final String BUILD_ONLY_ON_CHANGES = 'BUILD_ONLY_ON_CHANGES'
   public static final String POLL_CRON_INTERVAL = 'POLL_CRON_INTERVAL'
   public static final String FIRST_JOB = 'FIRST_JOB'
   public static final String LAST_JOB = 'LAST_JOB'
