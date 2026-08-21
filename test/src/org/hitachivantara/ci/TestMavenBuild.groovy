@@ -74,7 +74,7 @@ class TestMavenBuild extends BasePipelineSpecification {
     Builder builder = BuilderFactory.builderFor(jobItem)
     builder.getExecution().call()
     then:
-    String expected = 'echo "registry=https://one.hitachivantara.com/artifactory/api/npm/npm/" > ~/.npmrc && echo "//one.hitachivantara.com/artifactory/api/npm/npm/:_authToken=$REGISTRY_TOKEN" >> ~/.npmrc'
+    String expected = 'echo "registry=https://repo.pentaho.com/artifactory/api/npm/npm/" > ~/.npmrc && echo "//repo.pentaho.com/artifactory/api/npm/npm/:_authToken=$REGISTRY_TOKEN" >> ~/.npmrc'
     shellRule.cmds[0].trim() == expected
   }
 

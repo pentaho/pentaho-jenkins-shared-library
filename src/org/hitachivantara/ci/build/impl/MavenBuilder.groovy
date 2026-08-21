@@ -123,7 +123,7 @@ class MavenBuilder extends AbstractBuilder implements IBuilder, Serializable {
     return { ->
       steps.dir(item.buildWorkDir) {
         steps.withCredentials([steps.usernamePassword(credentialsId: deployCredentials,
-            usernameVariable: 'JF_USER', passwordVariable: 'JF_PASSWORD'),
+            usernameVariable: 'JF_USER', passwordVariable: 'JF_ACCESS_TOKEN'),
                                steps.usernamePassword(credentialsId: deployCredentials,
                                    usernameVariable: 'NEXUS_DEPLOY_USER', passwordVariable: 'NEXUS_DEPLOY_PASSWORD'),
                                steps.string(credentialsId: scmApiTokenCredential, variable: 'JF_GIT_TOKEN')]) {
